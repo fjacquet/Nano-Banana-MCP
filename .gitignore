@@ -1,24 +1,33 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+*.tsbuildinfo
+
+# Environment & secrets
 .env
-.env.local
-.env.*.local
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.env.*
+.nano-banana-config.json
+
+# Generated images
+generated_imgs/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editor files
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# Configuration files with sensitive data
-.nano-banana-config.json
+# Logs
+*.log
+npm-debug.log*
 
-# Test files
+# Test coverage
 coverage/
 .nyc_output/
-
-# Build files
-*.tsbuildinfo

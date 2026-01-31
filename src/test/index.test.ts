@@ -1,24 +1,23 @@
 import { jest } from '@jest/globals';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 // Mock the MCP SDK
 jest.mock('@modelcontextprotocol/sdk/server/index.js');
 jest.mock('@modelcontextprotocol/sdk/server/stdio.js');
-jest.mock('@google/generative-ai');
+jest.mock('@google/genai');
 
 const mockGenerateContent = jest.fn() as jest.MockedFunction<any>;
-const mockGetGenerativeModel = jest.fn().mockReturnValue({
-  generateContent: mockGenerateContent,
-}) as jest.MockedFunction<any>;
 
-const MockGoogleGenerativeAI = jest.fn().mockImplementation(() => ({
-  getGenerativeModel: mockGetGenerativeModel,
+const MockGoogleGenAI = jest.fn().mockImplementation(() => ({
+  models: {
+    generateContent: mockGenerateContent,
+  },
 })) as jest.MockedFunction<any>;
 
-// Override the import
-jest.unstable_mockModule('@google/generative-ai', () => ({
-  GoogleGenerativeAI: MockGoogleGenerativeAI,
+jest.unstable_mockModule('@google/genai', () => ({
+  GoogleGenAI: MockGoogleGenAI,
 }));
 
 describe('Nano-banana MCP Server', () => {
@@ -30,7 +29,7 @@ describe('Nano-banana MCP Server', () => {
     test('should validate API key format', () => {
       const validKey = 'AIzaSyC...';
       const invalidKey = '';
-      
+
       expect(validKey.length).toBeGreaterThan(0);
       expect(invalidKey.length).toBe(0);
     });
@@ -40,17 +39,17 @@ describe('Nano-banana MCP Server', () => {
         geminiApiKey: 'test-api-key-123',
       };
 
-      const configPath = path.join(process.cwd(), '.nano-banana-config.json');
-      
+      const configPath = path.join(os.homedir(), '.nano-banana-config.json');
+
       // Test writing config
       await fs.writeFile(configPath, JSON.stringify(testConfig, null, 2));
-      
+
       // Test reading config
       const configData = await fs.readFile(configPath, 'utf-8');
       const parsedConfig = JSON.parse(configData);
-      
+
       expect(parsedConfig.geminiApiKey).toBe('test-api-key-123');
-      
+
       // Cleanup
       try {
         await fs.unlink(configPath);
@@ -61,25 +60,38 @@ describe('Nano-banana MCP Server', () => {
   });
 
   describe('Image Generation', () => {
-    test('should format generation request correctly', () => {
+    test('should use correct default model name', () => {
       const prompt = 'A cute nano-banana in a lab setting';
-      const expectedModel = 'gemini-2.5-flash-image-preview';
-      
+      const expectedModel = 'gemini-2.5-flash-image';
+
       expect(prompt).toContain('nano-banana');
-      expect(expectedModel).toBe('gemini-2.5-flash-image-preview');
+      expect(expectedModel).toBe('gemini-2.5-flash-image');
+    });
+
+    test('should support pro model selection', () => {
+      const supportedModels = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'];
+
+      expect(supportedModels).toContain('gemini-2.5-flash-image');
+      expect(supportedModels).toContain('gemini-3-pro-image-preview');
+      expect(supportedModels).not.toContain('gemini-2.5-flash-image-preview');
     });
 
     test('should handle successful image generation', async () => {
       const mockResponse = {
-        text: () => 'Image generated successfully with nano-banana technology',
+        candidates: [{
+          content: {
+            parts: [{ text: 'Image generated successfully with nano-banana technology' }],
+          },
+        }],
       };
-      
-      mockGenerateContent.mockResolvedValueOnce({
-        response: mockResponse,
-      });
 
-      const result = await mockGenerateContent('test prompt');
-      expect((result as any).response.text()).toContain('nano-banana');
+      mockGenerateContent.mockResolvedValueOnce(mockResponse);
+
+      const result = await mockGenerateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: 'test prompt',
+      });
+      expect(result.candidates[0].content.parts[0].text).toContain('nano-banana');
     });
 
     test('should handle generation errors gracefully', async () => {
@@ -87,7 +99,10 @@ describe('Nano-banana MCP Server', () => {
       mockGenerateContent.mockRejectedValueOnce(error);
 
       try {
-        await mockGenerateContent('test prompt');
+        await mockGenerateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: 'test prompt',
+        });
       } catch (e) {
         expect((e as Error).message).toBe('API quota exceeded');
       }
@@ -96,31 +111,38 @@ describe('Nano-banana MCP Server', () => {
 
   describe('Image Editing', () => {
     test('should handle MIME type detection', () => {
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+      };
       const getMimeType = (filePath: string): string => {
         const ext = path.extname(filePath).toLowerCase();
-        switch (ext) {
-          case '.jpg':
-          case '.jpeg':
-            return 'image/jpeg';
-          case '.png':
-            return 'image/png';
-          case '.webp':
-            return 'image/webp';
-          default:
-            return 'image/jpeg';
-        }
+        return mimeTypes[ext] || 'image/jpeg';
       };
 
       expect(getMimeType('test.jpg')).toBe('image/jpeg');
       expect(getMimeType('test.png')).toBe('image/png');
       expect(getMimeType('test.webp')).toBe('image/webp');
+      expect(getMimeType('test.gif')).toBe('image/gif');
       expect(getMimeType('test.unknown')).toBe('image/jpeg');
+    });
+
+    test('should validate allowed image extensions', () => {
+      const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+      expect(allowed).toContain('.jpg');
+      expect(allowed).toContain('.gif');
+      expect(allowed).not.toContain('.svg');
+      expect(allowed).not.toContain('.bmp');
     });
 
     test('should format image edit request with base64 data', () => {
       const testImageData = Buffer.from('test image data');
       const base64Data = testImageData.toString('base64');
-      
+
       const imagePart = {
         inlineData: {
           data: base64Data,
@@ -137,9 +159,11 @@ describe('Nano-banana MCP Server', () => {
     test('should have correct tool definitions', () => {
       const expectedTools = [
         'configure_gemini_token',
-        'generate_image', 
+        'generate_image',
         'edit_image',
         'get_configuration_status',
+        'continue_editing',
+        'get_last_image_info',
       ];
 
       expectedTools.forEach(tool => {
@@ -155,17 +179,21 @@ describe('Nano-banana MCP Server', () => {
 
       const generateSchema = {
         prompt: { required: true, type: 'string' },
+        model: { required: false, type: 'string' },
       };
 
       const editSchema = {
         imagePath: { required: true, type: 'string' },
         prompt: { required: true, type: 'string' },
+        model: { required: false, type: 'string' },
       };
 
       expect(configureSchema.apiKey.required).toBe(true);
       expect(generateSchema.prompt.required).toBe(true);
+      expect(generateSchema.model.required).toBe(false);
       expect(editSchema.imagePath.required).toBe(true);
       expect(editSchema.prompt.required).toBe(true);
+      expect(editSchema.model.required).toBe(false);
     });
   });
 
@@ -191,53 +219,57 @@ describe('Nano-banana MCP Server', () => {
   });
 
   describe('Integration Test Simulation', () => {
-    test('should simulate full workflow', async () => {
-      // 1. Configuration step
+    test('should simulate full workflow with new API', async () => {
       const apiKey = 'test-gemini-api-key';
       expect(apiKey).toBeTruthy();
 
-      // 2. Initialize Google AI client
-      const genAI = new MockGoogleGenerativeAI(apiKey);
+      const genAI = new MockGoogleGenAI({ apiKey });
       expect(genAI).toBeDefined();
 
-      // 3. Generate image
       mockGenerateContent.mockResolvedValueOnce({
-        response: { text: () => 'Generated nano-banana image successfully' },
+        candidates: [{
+          content: {
+            parts: [{ text: 'Generated nano-banana image successfully' }],
+          },
+        }],
       });
 
-      const model = (genAI as any).getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
-      const result = await model.generateContent('a nano-banana in space');
-      
-      expect((result as any).response.text()).toContain('nano-banana');
-
-      // 4. Verify model was called correctly
-      expect(mockGetGenerativeModel).toHaveBeenCalledWith({
-        model: 'gemini-2.5-flash-image-preview',
+      const result = await (genAI as any).models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: 'a nano-banana in space',
       });
+
+      expect(result.candidates[0].content.parts[0].text).toContain('nano-banana');
     });
 
     test('should simulate error recovery', async () => {
-      // Simulate API error
       mockGenerateContent.mockRejectedValueOnce(new Error('Rate limit exceeded'));
 
       try {
-        const genAI = new MockGoogleGenerativeAI('test-key');
-        const model = (genAI as any).getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
-        await model.generateContent('test prompt');
+        const genAI = new MockGoogleGenAI({ apiKey: 'test-key' });
+        await (genAI as any).models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: 'test prompt',
+        });
       } catch (error) {
         expect((error as Error).message).toBe('Rate limit exceeded');
       }
 
-      // Simulate recovery
       mockGenerateContent.mockResolvedValueOnce({
-        response: { text: () => 'Retry successful' },
+        candidates: [{
+          content: {
+            parts: [{ text: 'Retry successful' }],
+          },
+        }],
       });
 
-      const genAI = new MockGoogleGenerativeAI('test-key');
-      const model = (genAI as any).getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
-      const result = await model.generateContent('test prompt');
-      
-      expect((result as any).response.text()).toBe('Retry successful');
+      const genAI = new MockGoogleGenAI({ apiKey: 'test-key' });
+      const result = await (genAI as any).models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: 'test prompt',
+      });
+
+      expect(result.candidates[0].content.parts[0].text).toBe('Retry successful');
     });
   });
 });
