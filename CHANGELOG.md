@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.0] - 2025-01-31
+
+### Changed
+- Upgraded all dependencies to latest versions (0 vulnerabilities)
+  - `eslint` 8 → 9 with flat config (`eslint.config.mjs` replaces `.eslintrc.json`)
+  - `typescript-eslint` 6 → 8 (unified `typescript-eslint` package)
+  - `zod` 3 → 4 (`.errors` → `.issues`)
+  - `dotenv` 16 → 17
+  - `@types/node` 20 → 25
+- Added Jest + ts-jest as explicit devDependencies (were missing)
+
 ## [2.0.0] - 2025-01-31
 
 ### Fixed

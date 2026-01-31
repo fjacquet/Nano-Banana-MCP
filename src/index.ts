@@ -66,7 +66,7 @@ class NanoBananaMCP {
     this.server = new Server(
       {
         name: "nano-banana-mcp",
-        version: "2.0.0",
+        version: "2.1.0",
       },
       {
         capabilities: {
@@ -377,7 +377,7 @@ class NanoBananaMCP {
       if (error instanceof z.ZodError) {
         throw new McpError(
           ErrorCode.InvalidParams,
-          `Invalid API key: ${error.errors[0]?.message}`
+          `Invalid API key: ${error.issues[0]?.message}`
         );
       }
       throw error;
@@ -481,11 +481,6 @@ class NanoBananaMCP {
         model: resolvedModel,
         contents: [{ parts: imageParts }],
       });
-
-      let statusPrefix = `Image edited with nano-banana!\n\nOriginal: ${imagePath}\nEdit prompt: "${prompt}"`;
-      if (referenceImages && referenceImages.length > 0) {
-        statusPrefix += `\n\nReference images:\n${referenceImages.map((f) => `- ${f}`).join("\n")}`;
-      }
 
       return await this.buildImageResponse(
         response,
