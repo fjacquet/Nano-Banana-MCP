@@ -10,13 +10,13 @@ An MCP server for AI image generation and editing using Google Gemini. Works wit
 
 1. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-2. Add to your MCP client config:
+2. Add to your MCP client config (Claude Code example):
 ```json
 {
   "mcpServers": {
     "nano-banana": {
       "command": "npx",
-      "args": ["nano-banana-mcp"],
+      "args": ["-y", "github:fjacquet/Nano-Banana-MCP"],
       "env": {
         "GEMINI_API_KEY": "your-key-here"
       }
@@ -24,6 +24,8 @@ An MCP server for AI image generation and editing using Google Gemini. Works wit
   }
 }
 ```
+
+> See [docs/configuration.md](docs/configuration.md) for Cursor and other MCP clients.
 
 3. Use the tools:
 ```

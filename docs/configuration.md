@@ -22,7 +22,7 @@ The server loads your API key in this order:
   "mcpServers": {
     "nano-banana": {
       "command": "npx",
-      "args": ["nano-banana-mcp"],
+      "args": ["-y", "github:fjacquet/Nano-Banana-MCP"],
       "env": {
         "GEMINI_API_KEY": "your-gemini-api-key-here"
       }
@@ -37,7 +37,7 @@ The server loads your API key in this order:
   "mcpServers": {
     "nano-banana": {
       "command": "npx",
-      "args": ["nano-banana-mcp"]
+      "args": ["-y", "github:fjacquet/Nano-Banana-MCP"]
     }
   }
 }
@@ -73,12 +73,12 @@ The server loads your API key in this order:
 **System environment variable:**
 ```bash
 export GEMINI_API_KEY="your-gemini-api-key-here"
-npx nano-banana-mcp
+npx -y github:fjacquet/Nano-Banana-MCP
 ```
 
 **Using the configure tool:**
 ```bash
-npx nano-banana-mcp
+npx -y github:fjacquet/Nano-Banana-MCP
 # Then use configure_gemini_token tool to set your key
 # Saves to ~/.nano-banana-config.json
 ```
