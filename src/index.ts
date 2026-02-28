@@ -20,9 +20,19 @@ import os from "os";
 
 dotenvConfig();
 
-const DEFAULT_MODEL = "gemini-2.5-flash-image";
-const SUPPORTED_MODELS = [DEFAULT_MODEL, "gemini-3-pro-image-preview"] as const;
+const DEFAULT_MODEL = "gemini-3.1-flash-image-preview";
+const SUPPORTED_MODELS = [
+  DEFAULT_MODEL,
+  "gemini-2.5-flash-image",
+  "gemini-3-pro-image-preview",
+] as const;
 type SupportedModel = typeof SUPPORTED_MODELS[number];
+
+const VALID_ASPECT_RATIOS = [
+  "1:1", "1:4", "1:8", "2:3", "3:2", "3:4", "4:1", "4:3",
+  "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
+] as const;
+const VALID_IMAGE_SIZES = ["512px", "1K", "2K", "4K"] as const;
 
 const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -66,7 +76,7 @@ class NanoBananaMCP {
     this.server = new Server(
       {
         name: "nano-banana-mcp",
-        version: "2.1.0",
+        version: "2.2.0",
       },
       {
         capabilities: {
@@ -112,7 +122,17 @@ class NanoBananaMCP {
                 model: {
                   type: "string",
                   enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, fast) or "gemini-3-pro-image-preview" (pro, higher quality)`,
+                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
+                },
+                aspectRatio: {
+                  type: "string",
+                  enum: VALID_ASPECT_RATIOS,
+                  description: `Aspect ratio of the generated image. Default: "1:1"`,
+                },
+                imageSize: {
+                  type: "string",
+                  enum: VALID_IMAGE_SIZES,
+                  description: `Resolution of the generated image. Default: "1K". Use "2K" or "4K" for high-resolution output.`,
                 },
               },
               required: ["prompt"],
@@ -143,7 +163,17 @@ class NanoBananaMCP {
                 model: {
                   type: "string",
                   enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, fast) or "gemini-3-pro-image-preview" (pro, higher quality)`,
+                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
+                },
+                aspectRatio: {
+                  type: "string",
+                  enum: VALID_ASPECT_RATIOS,
+                  description: `Aspect ratio of the output image. Default: "1:1"`,
+                },
+                imageSize: {
+                  type: "string",
+                  enum: VALID_IMAGE_SIZES,
+                  description: `Resolution of the output image. Default: "1K"`,
                 },
               },
               required: ["imagePath", "prompt"],
@@ -179,7 +209,17 @@ class NanoBananaMCP {
                 model: {
                   type: "string",
                   enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, fast) or "gemini-3-pro-image-preview" (pro, higher quality)`,
+                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
+                },
+                aspectRatio: {
+                  type: "string",
+                  enum: VALID_ASPECT_RATIOS,
+                  description: `Aspect ratio of the output image. Default: "1:1"`,
+                },
+                imageSize: {
+                  type: "string",
+                  enum: VALID_IMAGE_SIZES,
+                  description: `Resolution of the output image. Default: "1K"`,
                 },
               },
               required: ["prompt"],
@@ -394,16 +434,23 @@ class NanoBananaMCP {
       );
     }
 
-    const { prompt, model } = request.params.arguments as {
+    const { prompt, model, aspectRatio, imageSize } = request.params.arguments as {
       prompt: string;
       model?: string;
+      aspectRatio?: string;
+      imageSize?: string;
     };
     const resolvedModel = this.resolveModel(model);
 
     try {
+      const imageConfig = (aspectRatio || imageSize)
+        ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
+        : undefined;
+
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
         contents: prompt,
+        ...(imageConfig && { config: { imageConfig } }),
       });
 
       return await this.buildImageResponse(
@@ -430,12 +477,14 @@ class NanoBananaMCP {
       );
     }
 
-    const { imagePath, prompt, referenceImages, model } = request.params
+    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize } = request.params
       .arguments as {
       imagePath: string;
       prompt: string;
       referenceImages?: string[];
       model?: string;
+      aspectRatio?: string;
+      imageSize?: string;
     };
     const resolvedModel = this.resolveModel(model);
 
@@ -477,9 +526,14 @@ class NanoBananaMCP {
 
       imageParts.push({ text: prompt });
 
+      const imageConfig = (aspectRatio || imageSize)
+        ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
+        : undefined;
+
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
         contents: [{ parts: imageParts }],
+        ...(imageConfig && { config: { imageConfig } }),
       });
 
       return await this.buildImageResponse(
@@ -560,10 +614,12 @@ For the most secure setup, add this to your MCP configuration:
       );
     }
 
-    const { prompt, referenceImages, model } = request.params.arguments as {
+    const { prompt, referenceImages, model, aspectRatio, imageSize } = request.params.arguments as {
       prompt: string;
       referenceImages?: string[];
       model?: string;
+      aspectRatio?: string;
+      imageSize?: string;
     };
 
     return await this.editImage({
@@ -575,6 +631,8 @@ For the most secure setup, add this to your MCP configuration:
           prompt,
           referenceImages,
           model,
+          aspectRatio,
+          imageSize,
         },
       },
     } as CallToolRequest);

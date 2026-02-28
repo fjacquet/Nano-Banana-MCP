@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] - 2026-02-28
+
+### Changed
+- Default model upgraded to `gemini-3.1-flash-image-preview` (Nano Banana 2 — pro quality at Flash speed)
+- `gemini-2.5-flash-image` retained as a legacy option
+- Model descriptions updated across all tools
+
+### Added
+- `aspectRatio` parameter on `generate_image`, `edit_image`, `continue_editing`
+  - Supported values: `1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9`
+- `imageSize` parameter on `generate_image`, `edit_image`, `continue_editing`
+  - Supported values: `512px`, `1K` (default), `2K`, `4K`
+- Both parameters passed to the API via `config.imageConfig`
+
 ## [2.1.0] - 2025-01-31
 
 ### Changed
