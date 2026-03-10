@@ -15,10 +15,7 @@ import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
-import { config as dotenvConfig } from "dotenv";
 import os from "os";
-
-dotenvConfig();
 
 const DEFAULT_MODEL = "gemini-3.1-flash-image-preview";
 const SUPPORTED_MODELS = [

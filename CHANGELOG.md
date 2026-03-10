@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1] - 2026-03-10
+
+### Fixed
+- Remove `dotenv` dependency to prevent stdout pollution breaking MCP JSON-RPC transport.
+  dotenv v17 prints a banner to stdout; since MCP servers communicate via stdio JSON-RPC,
+  this caused `Unexpected token 'd', "[dotenv@17."... is not valid JSON` errors in clients.
+  Auth is handled via `GEMINI_API_KEY` env var or `~/.nano-banana-config.json` — no `.env` needed.
+
 ## [2.2.0] - 2026-02-28
 
 ### Changed
