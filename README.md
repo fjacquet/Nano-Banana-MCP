@@ -1,5 +1,10 @@
 # Nano-Banana MCP Server
 
+[![npm version](https://img.shields.io/npm/v/nano-banana-mcp.svg)](https://www.npmjs.com/package/nano-banana-mcp)
+[![CI](https://github.com/fjacquet/Nano-Banana-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/fjacquet/Nano-Banana-MCP/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
 An MCP server for AI image generation and editing using Google Gemini. Works with Claude Code, Cursor, and other MCP clients.
 
 **Models supported:**
