@@ -698,9 +698,11 @@ For the most secure setup, add this to your MCP configuration:
 
     const cwd = process.cwd();
     if (
+      cwd === "/" ||
       cwd.startsWith("/usr/") ||
       cwd.startsWith("/opt/") ||
-      cwd.startsWith("/var/")
+      cwd.startsWith("/var/") ||
+      cwd.startsWith("/tmp/")
     ) {
       return path.join(os.homedir(), "nano-banana-images");
     }

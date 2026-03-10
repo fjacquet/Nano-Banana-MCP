@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2] - 2026-03-10
+
+### Fixed
+- Fix `mkdir '/'` error when server is invoked via `npx` with `cwd = /`.
+  `getImagesDirectory()` now also catches `/` and `/tmp/` as unsafe working
+  directories, falling back to `~/nano-banana-images/` instead.
+
 ## [2.2.1] - 2026-03-10
 
 ### Fixed
