@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1] - 2026-05-01
+
+### Fixed
+- Published bin (`dist/index.js`) is now marked executable in the tarball.
+  In 2.3.0 it shipped as `0644`, causing `npx @fjacquet/nano-banana-mcp` to
+  fail with `sh: nano-banana-mcp: command not found`. The `build` script now
+  runs `chmod +x dist/index.js` after `tsc`.
+
 ## [2.3.0] - 2026-05-01
 
 ### Security
