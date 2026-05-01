@@ -124,7 +124,7 @@ class NanoBananaMCP {
   constructor() {
     this.server = new McpServer({
       name: "nano-banana-mcp",
-      version: "2.2.2",
+      version: "2.3.0",
     });
 
     this.setupHandlers();

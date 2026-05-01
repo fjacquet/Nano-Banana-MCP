@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.3.0] - 2026-05-01
+
+### Security
+- **Image path sandbox**: `validateImagePath` now canonicalizes via `fs.realpath`
+  (defeating symlink-based escapes) and rejects paths outside the user's home
+  directory, OS tmpdir, or current working directory. System roots (`/etc`,
+  `/usr`, `/var`, `/proc`, `/sys`, `/dev`, `/root`, `/boot`) are excluded.
+  Closes the prior data-exfiltration path where an LLM-supplied image path
+  pointing at e.g. `/etc/passwd` would be base64-uploaded to the Gemini API.
+
+### Added
+- `useGoogleSearch` boolean parameter on `generate_image`, `edit_image`, and
+  `continue_editing` — enables Google Search grounding for fact-aware image
+  generation. Requires model `gemini-3-pro-image-preview` (Flash variants
+  don't support grounding); throws `InvalidParams` on other models.
+
+### Changed
+- Migrated from the low-level `Server` + `setRequestHandler(*Schema, …)` MCP
+  SDK API to the high-level `McpServer` + `registerTool` API. Tool schemas
+  are now declared once via Zod (single source of truth), replacing the
+  hand-written JSON Schema and parallel TypeScript cast types. Tool
+  handlers receive parsed, type-safe arguments directly. Net −116 LoC.
+- Bumped runtime deps: `@google/genai` 1.39 → 1.51, `@modelcontextprotocol/sdk`
+  1.25 → 1.29, `zod` 4.3 → 4.4. Patched 8 transitive vulnerabilities
+  (1 critical in protobufjs, plus minimatch/picomatch/hono ReDoS and
+  traversal issues) via in-semver fixes.
+
 ## [2.2.2] - 2026-03-10
 
 ### Fixed
