@@ -46,6 +46,11 @@ const AspectRatioOpt = z.enum(VALID_ASPECT_RATIOS).optional()
 const ImageSizeOpt = z.enum(VALID_IMAGE_SIZES).optional()
   .describe(`Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`);
 
+const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image-preview";
+
+const UseGoogleSearchOpt = z.boolean().optional()
+  .describe(`Enable Google Search grounding for fact-aware image generation. Only supported on "${GROUNDING_MODEL}".`);
+
 const ConfigureGeminiShape = {
   apiKey: z.string().min(1).describe("Your Gemini API key from Google AI Studio"),
 };
@@ -55,6 +60,7 @@ const GenerateImageShape = {
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
+  useGoogleSearch: UseGoogleSearchOpt,
 };
 
 const EditImageShape = {
@@ -65,6 +71,7 @@ const EditImageShape = {
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
+  useGoogleSearch: UseGoogleSearchOpt,
 };
 
 const ContinueEditingShape = {
@@ -74,6 +81,7 @@ const ContinueEditingShape = {
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
+  useGoogleSearch: UseGoogleSearchOpt,
 };
 
 interface ImagePart {
@@ -102,6 +110,7 @@ interface EditImageArgs {
   model?: string;
   aspectRatio?: string;
   imageSize?: string;
+  useGoogleSearch?: boolean;
 }
 
 class NanoBananaMCP {
@@ -206,12 +215,51 @@ class NanoBananaMCP {
       );
     }
 
+    // Canonicalize to defeat symlink-based escapes, then sandbox-check.
+    let realPath: string;
+    try {
+      realPath = await fs.realpath(resolved);
+    } catch {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Image file not accessible: ${filePath}`
+      );
+    }
+
+    if (!this.isPathInAllowedRoots(realPath)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Image path is outside allowed roots (home directory, current working directory, or system tmpdir). System file access is blocked.`
+      );
+    }
+
     if (stats.size > MAX_IMAGE_SIZE_BYTES) {
       throw new McpError(
         ErrorCode.InvalidParams,
         `Image file too large (${Math.round(stats.size / 1024 / 1024)}MB). Maximum: ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`
       );
     }
+  }
+
+  private getAllowedPathRoots(): string[] {
+    const roots: string[] = [
+      path.resolve(os.homedir()),
+      path.resolve(os.tmpdir()),
+    ];
+    const cwd = path.resolve(process.cwd());
+    const SYSTEM_PREFIXES = ["/usr/", "/etc", "/var/", "/proc", "/sys", "/dev", "/root", "/boot"];
+    if (cwd !== "/" && !SYSTEM_PREFIXES.some((p) => cwd === p.replace(/\/$/, "") || cwd.startsWith(p))) {
+      roots.push(cwd);
+    }
+    return roots;
+  }
+
+  private isPathInAllowedRoots(resolved: string): boolean {
+    return this.getAllowedPathRoots().some((root) => {
+      if (resolved === root) return true;
+      const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+      return resolved.startsWith(prefix);
+    });
   }
 
   private resolveModel(model?: string): SupportedModel {
@@ -335,6 +383,7 @@ class NanoBananaMCP {
     model?: string;
     aspectRatio?: string;
     imageSize?: string;
+    useGoogleSearch?: boolean;
   }): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
@@ -343,18 +392,23 @@ class NanoBananaMCP {
       );
     }
 
-    const { prompt, model, aspectRatio, imageSize } = args;
+    const { prompt, model, aspectRatio, imageSize, useGoogleSearch } = args;
     const resolvedModel = this.resolveModel(model);
 
+    if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`
+      );
+    }
+
     try {
-      const imageConfig = (aspectRatio || imageSize)
-        ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
-        : undefined;
+      const config = this.buildGenerationConfig(aspectRatio, imageSize, useGoogleSearch);
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
         contents: prompt,
-        ...(imageConfig && { config: { imageConfig } }),
+        ...(config && { config }),
       });
 
       return await this.buildImageResponse(
@@ -372,6 +426,22 @@ class NanoBananaMCP {
     }
   }
 
+  private buildGenerationConfig(
+    aspectRatio?: string,
+    imageSize?: string,
+    useGoogleSearch?: boolean,
+  ): { imageConfig?: object; tools?: object[] } | undefined {
+    const imageConfig = (aspectRatio || imageSize)
+      ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
+      : undefined;
+    const tools = useGoogleSearch ? [{ googleSearch: {} }] : undefined;
+    if (!imageConfig && !tools) return undefined;
+    return {
+      ...(imageConfig && { imageConfig }),
+      ...(tools && { tools }),
+    };
+  }
+
   private async editImage(args: EditImageArgs): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
@@ -380,8 +450,15 @@ class NanoBananaMCP {
       );
     }
 
-    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize } = args;
+    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize, useGoogleSearch } = args;
     const resolvedModel = this.resolveModel(model);
+
+    if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`
+      );
+    }
 
     await this.validateImagePath(imagePath);
 
@@ -421,14 +498,12 @@ class NanoBananaMCP {
 
       imageParts.push({ text: prompt });
 
-      const imageConfig = (aspectRatio || imageSize)
-        ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
-        : undefined;
+      const config = this.buildGenerationConfig(aspectRatio, imageSize, useGoogleSearch);
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
         contents: [{ parts: imageParts }],
-        ...(imageConfig && { config: { imageConfig } }),
+        ...(config && { config }),
       });
 
       return await this.buildImageResponse(
