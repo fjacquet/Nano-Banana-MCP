@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-  CallToolRequest,
   CallToolResult,
   ErrorCode,
   McpError,
@@ -42,6 +38,44 @@ const ConfigSchema = z.object({
 
 type Config = z.infer<typeof ConfigSchema>;
 
+const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`;
+
+const ModelOpt = z.enum(SUPPORTED_MODELS).optional().describe(MODEL_DESCRIPTION);
+const AspectRatioOpt = z.enum(VALID_ASPECT_RATIOS).optional()
+  .describe(`Aspect ratio of the output image. Default: "1:1"`);
+const ImageSizeOpt = z.enum(VALID_IMAGE_SIZES).optional()
+  .describe(`Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`);
+
+const ConfigureGeminiShape = {
+  apiKey: z.string().min(1).describe("Your Gemini API key from Google AI Studio"),
+};
+
+const GenerateImageShape = {
+  prompt: z.string().describe("Text prompt describing the NEW image to create from scratch"),
+  model: ModelOpt,
+  aspectRatio: AspectRatioOpt,
+  imageSize: ImageSizeOpt,
+};
+
+const EditImageShape = {
+  imagePath: z.string().describe("Full file path to the main image file to edit"),
+  prompt: z.string().describe("Text describing the modifications to make to the existing image"),
+  referenceImages: z.array(z.string()).optional()
+    .describe("Optional array of file paths to additional reference images to use during editing (e.g., for style transfer, adding elements, etc.)"),
+  model: ModelOpt,
+  aspectRatio: AspectRatioOpt,
+  imageSize: ImageSizeOpt,
+};
+
+const ContinueEditingShape = {
+  prompt: z.string().describe("Text describing the modifications to make to the last image"),
+  referenceImages: z.array(z.string()).optional()
+    .describe("Optional array of file paths to additional reference images"),
+  model: ModelOpt,
+  aspectRatio: AspectRatioOpt,
+  imageSize: ImageSizeOpt,
+};
+
 interface ImagePart {
   inlineData: {
     data: string;
@@ -61,8 +95,17 @@ interface SavedImage {
   mimeType: string;
 }
 
+interface EditImageArgs {
+  imagePath: string;
+  prompt: string;
+  referenceImages?: string[];
+  model?: string;
+  aspectRatio?: string;
+  imageSize?: string;
+}
+
 class NanoBananaMCP {
-  private server: Server;
+  private server: McpServer;
   private genAI: GoogleGenAI | null = null;
   private config: Config | null = null;
   private lastImagePath: string | null = null;
@@ -70,203 +113,73 @@ class NanoBananaMCP {
     "not_configured";
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "nano-banana-mcp",
-        version: "2.2.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
+    this.server = new McpServer({
+      name: "nano-banana-mcp",
+      version: "2.2.2",
+    });
 
     this.setupHandlers();
   }
 
   private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: "configure_gemini_token",
-            description:
-              "Configure your Gemini API token for nano-banana image generation",
-            inputSchema: {
-              type: "object",
-              properties: {
-                apiKey: {
-                  type: "string",
-                  description: "Your Gemini API key from Google AI Studio",
-                },
-              },
-              required: ["apiKey"],
-            },
-          },
-          {
-            name: "generate_image",
-            description:
-              "Generate a NEW image from text prompt. Use this ONLY when creating a completely new image, not when modifying an existing one.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                prompt: {
-                  type: "string",
-                  description:
-                    "Text prompt describing the NEW image to create from scratch",
-                },
-                model: {
-                  type: "string",
-                  enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
-                },
-                aspectRatio: {
-                  type: "string",
-                  enum: VALID_ASPECT_RATIOS,
-                  description: `Aspect ratio of the generated image. Default: "1:1"`,
-                },
-                imageSize: {
-                  type: "string",
-                  enum: VALID_IMAGE_SIZES,
-                  description: `Resolution of the generated image. Default: "1K". Use "2K" or "4K" for high-resolution output.`,
-                },
-              },
-              required: ["prompt"],
-            },
-          },
-          {
-            name: "edit_image",
-            description:
-              "Edit a SPECIFIC existing image file, optionally using additional reference images. Use this when you have the exact file path of an image to modify.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                imagePath: {
-                  type: "string",
-                  description: "Full file path to the main image file to edit",
-                },
-                prompt: {
-                  type: "string",
-                  description:
-                    "Text describing the modifications to make to the existing image",
-                },
-                referenceImages: {
-                  type: "array",
-                  items: { type: "string" },
-                  description:
-                    "Optional array of file paths to additional reference images to use during editing (e.g., for style transfer, adding elements, etc.)",
-                },
-                model: {
-                  type: "string",
-                  enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
-                },
-                aspectRatio: {
-                  type: "string",
-                  enum: VALID_ASPECT_RATIOS,
-                  description: `Aspect ratio of the output image. Default: "1:1"`,
-                },
-                imageSize: {
-                  type: "string",
-                  enum: VALID_IMAGE_SIZES,
-                  description: `Resolution of the output image. Default: "1K"`,
-                },
-              },
-              required: ["imagePath", "prompt"],
-            },
-          },
-          {
-            name: "get_configuration_status",
-            description: "Check if Gemini API token is configured",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              additionalProperties: false,
-            },
-          },
-          {
-            name: "continue_editing",
-            description:
-              "Continue editing the LAST image that was generated or edited in this session, optionally using additional reference images. Use this for iterative improvements.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                prompt: {
-                  type: "string",
-                  description:
-                    "Text describing the modifications to make to the last image",
-                },
-                referenceImages: {
-                  type: "array",
-                  items: { type: "string" },
-                  description:
-                    "Optional array of file paths to additional reference images",
-                },
-                model: {
-                  type: "string",
-                  enum: SUPPORTED_MODELS,
-                  description: `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`,
-                },
-                aspectRatio: {
-                  type: "string",
-                  enum: VALID_ASPECT_RATIOS,
-                  description: `Aspect ratio of the output image. Default: "1:1"`,
-                },
-                imageSize: {
-                  type: "string",
-                  enum: VALID_IMAGE_SIZES,
-                  description: `Resolution of the output image. Default: "1K"`,
-                },
-              },
-              required: ["prompt"],
-            },
-          },
-          {
-            name: "get_last_image_info",
-            description:
-              "Get information about the last generated/edited image in this session.",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              additionalProperties: false,
-            },
-          },
-        ] as Tool[],
-      };
-    });
+    this.server.registerTool(
+      "configure_gemini_token",
+      {
+        description:
+          "Configure your Gemini API token for nano-banana image generation",
+        inputSchema: ConfigureGeminiShape,
+      },
+      async ({ apiKey }) => this.configureGeminiToken(apiKey),
+    );
 
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request: CallToolRequest): Promise<CallToolResult> => {
-        try {
-          switch (request.params.name) {
-            case "configure_gemini_token":
-              return await this.configureGeminiToken(request);
-            case "generate_image":
-              return await this.generateImage(request);
-            case "edit_image":
-              return await this.editImage(request);
-            case "get_configuration_status":
-              return await this.getConfigurationStatus();
-            case "continue_editing":
-              return await this.continueEditing(request);
-            case "get_last_image_info":
-              return await this.getLastImageInfo();
-            default:
-              throw new McpError(
-                ErrorCode.MethodNotFound,
-                `Unknown tool: ${request.params.name}`
-              );
-          }
-        } catch (error) {
-          if (error instanceof McpError) throw error;
-          throw new McpError(
-            ErrorCode.InternalError,
-            `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      }
+    this.server.registerTool(
+      "generate_image",
+      {
+        description:
+          "Generate a NEW image from text prompt. Use this ONLY when creating a completely new image, not when modifying an existing one.",
+        inputSchema: GenerateImageShape,
+      },
+      async ({ prompt, model, aspectRatio, imageSize }) =>
+        this.generateImage({ prompt, model, aspectRatio, imageSize }),
+    );
+
+    this.server.registerTool(
+      "edit_image",
+      {
+        description:
+          "Edit a SPECIFIC existing image file, optionally using additional reference images. Use this when you have the exact file path of an image to modify.",
+        inputSchema: EditImageShape,
+      },
+      async (args) => this.editImage(args),
+    );
+
+    this.server.registerTool(
+      "get_configuration_status",
+      {
+        description: "Check if Gemini API token is configured",
+        inputSchema: {},
+      },
+      async () => this.getConfigurationStatus(),
+    );
+
+    this.server.registerTool(
+      "continue_editing",
+      {
+        description:
+          "Continue editing the LAST image that was generated or edited in this session, optionally using additional reference images. Use this for iterative improvements.",
+        inputSchema: ContinueEditingShape,
+      },
+      async (args) => this.continueEditing(args),
+    );
+
+    this.server.registerTool(
+      "get_last_image_info",
+      {
+        description:
+          "Get information about the last generated/edited image in this session.",
+        inputSchema: {},
+      },
+      async () => this.getLastImageInfo(),
     );
   }
 
@@ -388,11 +301,7 @@ class NanoBananaMCP {
 
   // --- Tool implementations ---
 
-  private async configureGeminiToken(
-    request: CallToolRequest
-  ): Promise<CallToolResult> {
-    const { apiKey } = request.params.arguments as { apiKey: string };
-
+  private async configureGeminiToken(apiKey: string): Promise<CallToolResult> {
     try {
       ConfigSchema.parse({ geminiApiKey: apiKey });
 
@@ -421,9 +330,12 @@ class NanoBananaMCP {
     }
   }
 
-  private async generateImage(
-    request: CallToolRequest
-  ): Promise<CallToolResult> {
+  private async generateImage(args: {
+    prompt: string;
+    model?: string;
+    aspectRatio?: string;
+    imageSize?: string;
+  }): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -431,12 +343,7 @@ class NanoBananaMCP {
       );
     }
 
-    const { prompt, model, aspectRatio, imageSize } = request.params.arguments as {
-      prompt: string;
-      model?: string;
-      aspectRatio?: string;
-      imageSize?: string;
-    };
+    const { prompt, model, aspectRatio, imageSize } = args;
     const resolvedModel = this.resolveModel(model);
 
     try {
@@ -457,6 +364,7 @@ class NanoBananaMCP {
         []
       );
     } catch (error) {
+      if (error instanceof McpError) throw error;
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to generate image: ${error instanceof Error ? error.message : String(error)}`
@@ -464,9 +372,7 @@ class NanoBananaMCP {
     }
   }
 
-  private async editImage(
-    request: CallToolRequest
-  ): Promise<CallToolResult> {
+  private async editImage(args: EditImageArgs): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -474,15 +380,7 @@ class NanoBananaMCP {
       );
     }
 
-    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize } = request.params
-      .arguments as {
-      imagePath: string;
-      prompt: string;
-      referenceImages?: string[];
-      model?: string;
-      aspectRatio?: string;
-      imageSize?: string;
-    };
+    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize } = args;
     const resolvedModel = this.resolveModel(model);
 
     await this.validateImagePath(imagePath);
@@ -585,9 +483,13 @@ For the most secure setup, add this to your MCP configuration:
     };
   }
 
-  private async continueEditing(
-    request: CallToolRequest
-  ): Promise<CallToolResult> {
+  private async continueEditing(args: {
+    prompt: string;
+    referenceImages?: string[];
+    model?: string;
+    aspectRatio?: string;
+    imageSize?: string;
+  }): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -611,28 +513,10 @@ For the most secure setup, add this to your MCP configuration:
       );
     }
 
-    const { prompt, referenceImages, model, aspectRatio, imageSize } = request.params.arguments as {
-      prompt: string;
-      referenceImages?: string[];
-      model?: string;
-      aspectRatio?: string;
-      imageSize?: string;
-    };
-
     return await this.editImage({
-      method: "tools/call",
-      params: {
-        name: "edit_image",
-        arguments: {
-          imagePath: this.lastImagePath,
-          prompt,
-          referenceImages,
-          model,
-          aspectRatio,
-          imageSize,
-        },
-      },
-    } as CallToolRequest);
+      imagePath: this.lastImagePath,
+      ...args,
+    });
   }
 
   private async getLastImageInfo(): Promise<CallToolResult> {
