@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.0.0] - 2026-06-07
+
+### Changed (BREAKING)
+- **Model IDs migrated from preview to GA.** Google retires the preview
+  identifiers (`gemini-3-pro-image-preview` is shut down 2026-06-25), so the
+  preview suffixes are dropped:
+  - default `gemini-3.1-flash-image-preview` → `gemini-3.1-flash-image` (Nano Banana 2)
+  - `gemini-3-pro-image-preview` → `gemini-3-pro-image` (Nano Banana Pro; also the
+    Google Search grounding model)
+  - `gemini-2.5-flash-image` unchanged (legacy)
+
+  Callers that explicitly pass the old preview IDs must update.
+- Bumped `@google/genai` 1.51 → 2.8 (major). The API surface in use
+  (`GoogleGenAI`, `models.generateContent`) is type-compatible; run a live
+  generation before deploying.
+- Upgraded TypeScript 5.9 → 6.0 and switched `tsconfig.json` to NodeNext module
+  resolution (TS 6 removed the deprecated `node10` resolver).
+
+### Security
+- Patched all outstanding advisories — `npm audit` now reports **0 vulnerabilities**
+  (was 8: high `fast-uri` path traversal plus 7 moderate in transitive deps).
+
+### Tooling
+- Replaced ESLint (`eslint`, `@eslint/js`, `typescript-eslint`, `eslint.config.mjs`)
+  with **Biome** (`biome.json`). `npm run lint` → `biome lint src/`; added `npm run format`.
+- Applied Biome quality fixes: `node:` import protocol and `import type` for
+  type-only imports.
+- Bumped dev deps: `jest` 30.3 → 30.4, `ts-jest` 29.4.9 → 29.4.11, `tsx` 4.21 → 4.22,
+  `@types/node` 25.6 → 25.9, `zod` 4.4.1 → 4.4.3.
+
 ## [2.3.1] - 2026-05-01
 
 ### Fixed

@@ -3,21 +3,21 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  CallToolResult,
+  type CallToolResult,
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 
-const DEFAULT_MODEL = "gemini-3.1-flash-image-preview";
+const DEFAULT_MODEL = "gemini-3.1-flash-image";
 const SUPPORTED_MODELS = [
   DEFAULT_MODEL,
   "gemini-2.5-flash-image",
-  "gemini-3-pro-image-preview",
+  "gemini-3-pro-image",
 ] as const;
 type SupportedModel = typeof SUPPORTED_MODELS[number];
 
@@ -38,7 +38,7 @@ const ConfigSchema = z.object({
 
 type Config = z.infer<typeof ConfigSchema>;
 
-const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image-preview" (highest quality)`;
+const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image" (Nano Banana Pro, highest quality)`;
 
 const ModelOpt = z.enum(SUPPORTED_MODELS).optional().describe(MODEL_DESCRIPTION);
 const AspectRatioOpt = z.enum(VALID_ASPECT_RATIOS).optional()
@@ -46,7 +46,7 @@ const AspectRatioOpt = z.enum(VALID_ASPECT_RATIOS).optional()
 const ImageSizeOpt = z.enum(VALID_IMAGE_SIZES).optional()
   .describe(`Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`);
 
-const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image-preview";
+const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image";
 
 const UseGoogleSearchOpt = z.boolean().optional()
   .describe(`Enable Google Search grounding for fact-aware image generation. Only supported on "${GROUNDING_MODEL}".`);
@@ -124,7 +124,7 @@ class NanoBananaMCP {
   constructor() {
     this.server = new McpServer({
       name: "nano-banana-mcp",
-      version: "2.3.1",
+      version: "3.0.0",
     });
 
     this.setupHandlers();
@@ -205,7 +205,7 @@ class NanoBananaMCP {
       );
     }
 
-    let stats;
+    let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
       stats = await fs.stat(resolved);
     } catch {

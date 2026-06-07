@@ -11,6 +11,10 @@ const config = {
       "ts-jest",
       {
         useESM: true,
+        // NodeNext module kind is intentional; silence ts-jest's isolatedModules advisory.
+        diagnostics: {
+          ignoreCodes: [151002],
+        },
       },
     ],
   },

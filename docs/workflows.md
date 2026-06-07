@@ -21,8 +21,8 @@
 
 ## Pro Quality Output
 
-Use `model: "gemini-3-pro-image-preview"` for any step when you need higher quality output with advanced reasoning.
+Use `model: "gemini-3-pro-image"` for any step when you need higher quality output with advanced reasoning.
 
 ```
-generate_image({ prompt: "...", model: "gemini-3-pro-image-preview" })
+generate_image({ prompt: "...", model: "gemini-3-pro-image" })
 ```

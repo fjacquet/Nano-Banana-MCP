@@ -158,7 +158,7 @@ class IntegrationTester {
         'get_last_image_info',
         'GoogleGenAI',
         'gemini-2.5-flash-image',
-        'gemini-3-pro-image-preview',
+        'gemini-3-pro-image',
       ];
 
       for (const element of requiredElements) {

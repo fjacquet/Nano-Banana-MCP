@@ -7,14 +7,14 @@ Create a new image from a text prompt.
 ```typescript
 generate_image({
   prompt: "A futuristic city at night with neon lights",
-  model?: "gemini-2.5-flash-image" // optional, default
+  model?: "gemini-3.1-flash-image" // optional, default
 })
 ```
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `prompt` | Yes | Text description of the image to create |
-| `model` | No | `gemini-2.5-flash-image` (default) or `gemini-3-pro-image-preview` |
+| `model` | No | `gemini-3.1-flash-image` (default), `gemini-2.5-flash-image`, or `gemini-3-pro-image` |
 
 ## edit_image
 

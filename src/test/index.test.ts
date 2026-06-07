@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
 // Mock the MCP SDK
 jest.mock('@modelcontextprotocol/sdk/server/index.js');
@@ -62,23 +62,23 @@ describe('Nano-banana MCP Server', () => {
   describe('Image Generation', () => {
     test('should use correct default model name', () => {
       const prompt = 'A cute nano-banana in a lab setting';
-      const expectedModel = 'gemini-3.1-flash-image-preview';
+      const expectedModel = 'gemini-3.1-flash-image';
 
       expect(prompt).toContain('nano-banana');
-      expect(expectedModel).toBe('gemini-3.1-flash-image-preview');
+      expect(expectedModel).toBe('gemini-3.1-flash-image');
     });
 
     test('should support pro model selection', () => {
       const supportedModels = [
-        'gemini-3.1-flash-image-preview',
-        'gemini-3.1-flash-image-preview',
-        'gemini-3-pro-image-preview',
+        'gemini-3.1-flash-image',
+        'gemini-2.5-flash-image',
+        'gemini-3-pro-image',
       ];
 
-      expect(supportedModels).toContain('gemini-3.1-flash-image-preview');
-      expect(supportedModels).toContain('gemini-3.1-flash-image-preview');
-      expect(supportedModels).toContain('gemini-3-pro-image-preview');
-      expect(supportedModels).not.toContain('gemini-3.1-flash-image-preview-preview');
+      expect(supportedModels).toContain('gemini-3.1-flash-image');
+      expect(supportedModels).toContain('gemini-2.5-flash-image');
+      expect(supportedModels).toContain('gemini-3-pro-image');
+      expect(supportedModels).not.toContain('gemini-3-pro-image-preview');
     });
 
     test('should handle successful image generation', async () => {
@@ -93,7 +93,7 @@ describe('Nano-banana MCP Server', () => {
       mockGenerateContent.mockResolvedValueOnce(mockResponse);
 
       const result = await mockGenerateContent({
-        model: 'gemini-3.1-flash-image-preview',
+        model: 'gemini-3.1-flash-image',
         contents: 'test prompt',
       });
       expect(result.candidates[0].content.parts[0].text).toContain('nano-banana');
@@ -105,7 +105,7 @@ describe('Nano-banana MCP Server', () => {
 
       try {
         await mockGenerateContent({
-          model: 'gemini-3.1-flash-image-preview',
+          model: 'gemini-3.1-flash-image',
           contents: 'test prompt',
         });
       } catch (e) {
@@ -240,7 +240,7 @@ describe('Nano-banana MCP Server', () => {
       });
 
       const result = await (genAI as any).models.generateContent({
-        model: 'gemini-3.1-flash-image-preview',
+        model: 'gemini-3.1-flash-image',
         contents: 'a nano-banana in space',
       });
 
@@ -253,7 +253,7 @@ describe('Nano-banana MCP Server', () => {
       try {
         const genAI = new MockGoogleGenAI({ apiKey: 'test-key' });
         await (genAI as any).models.generateContent({
-          model: 'gemini-3.1-flash-image-preview',
+          model: 'gemini-3.1-flash-image',
           contents: 'test prompt',
         });
       } catch (error) {
@@ -270,7 +270,7 @@ describe('Nano-banana MCP Server', () => {
 
       const genAI = new MockGoogleGenAI({ apiKey: 'test-key' });
       const result = await (genAI as any).models.generateContent({
-        model: 'gemini-3.1-flash-image-preview',
+        model: 'gemini-3.1-flash-image',
         contents: 'test prompt',
       });
 
