@@ -34,3 +34,8 @@ npm-debug.log*
 # Test coverage
 coverage/
 .nyc_output/
+# Added by code-review-graph
+.code-review-graph/
+
+docs/.vitepress/dist
+docs/.vitepress/cache
