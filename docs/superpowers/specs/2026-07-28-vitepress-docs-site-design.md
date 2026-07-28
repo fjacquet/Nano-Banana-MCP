@@ -38,6 +38,29 @@ VitePress, matching the existing fleet precedent (`icons` uses
 `docs:build: vitepress build docs` with `docs/.vitepress/config.ts`). It is npm-native,
 so it respects the standing convention that web repos carry no Makefile.
 
+**Version: `2.0.0-alpha.18`, not the 1.6.4 stable line.** This is deliberate and was
+measured rather than assumed:
+
+| | vitepress 1.6.4 | vitepress 2.0.0-alpha.18 |
+|---|---|---|
+| vite | 5.4.21 | 8.1.5 |
+| osv-scanner | 3 vite advisories + 1 esbuild | `No issues found` |
+
+The 1.6.4 line pins `vite@^5.4.14`, and the three vite advisories
+(GHSA-4w7w-66w2-5vf9, GHSA-fx2h-pf6j-xcff, GHSA-v6wh-96g9-6wx3) have no fix available on
+vite 5.x — which is exactly why `icons` carries them as waivers. Adopting 1.6.4 here would
+mean recreating an `osv-scanner.toml` on Nano-Banana-MCP, reversing PR #4 which removed it
+on 2026-07-27.
+
+The alpha risk is bounded: VitePress is a devDependency used only to build the docs site.
+The `files` field publishes `dist/`, `README.md` and `LICENSE`, so it never enters the npm
+tarball, and a regression surfaces as a failed docs build in CI rather than as breakage for
+consumers.
+
+This also satisfies the re-check condition recorded in `icons`' own waiver — "re-check when
+vitepress publishes a release that depends on vite >= 6.4.x" — so it is the eventual path
+off those three waivers too.
+
 ### Site layout
 
 VitePress takes `docs/` as its source root:
@@ -103,6 +126,17 @@ reference `@v1`, so the moving tag must follow or no consumer receives the chang
 the immutable tag first is the practice that lapsed after `v1.0.0` and was restored with
 `v1.1.0` on 2026-07-28.
 
+## Prototype results
+
+The configuration above was smoke-tested against `vitepress@2.0.0-alpha.18` before this
+spec was finalised. Build completes in under a second, and the three details that fail
+silently were each confirmed:
+
+- `<!--@include: ../CHANGELOG.md-->` renders the root changelog into the page
+- `base` is applied to every asset URL (`/Nano-Banana-MCP/assets/...`)
+- `srcExclude: ['**/superpowers/**']` keeps this spec out of the build — the output
+  contains only `index.html`, `configuration.html`, `changelog.html` and `404.html`
+
 ## Verification
 
 - `npm run docs:build` succeeds locally and emits `docs/.vitepress/dist`
@@ -119,3 +153,7 @@ The last two are the actual success criteria. Today the URL serves nothing.
   move, and by the input being defaulted and backward-compatible.
 - **VitePress adds sizeable devDependencies.** No effect on the published package: the
   `files` field ships only `dist/`, `README.md` and `LICENSE`.
+- **Pre-release generator.** `2.0.0-alpha.18` may introduce breaking changes before 2.0
+  final. Accepted for the reasons above; the mitigation is that the docs build runs in CI
+  on every push to `main`, so a regression is caught immediately and affects nothing that
+  users install. Revisit when 2.0 stable ships.
