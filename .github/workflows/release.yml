@@ -1,0 +1,13 @@
+name: Release
+on:
+  push: { tags: ["v*"] }
+permissions:
+  contents: read
+  id-token: write # must be granted here too: npm validates the calling workflow
+jobs:
+  release:
+    uses: fjacquet/ci/.github/workflows/npm-release.yml@v1
+    permissions:
+      contents: write
+      id-token: write
+    with: { node-version: "24", environment: "npm" }
