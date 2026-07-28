@@ -22,7 +22,9 @@
     "format": "biome format --write src/",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm run typecheck"
+    "prepublishOnly": "npm run build && npm run typecheck",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs"
   },
   "keywords": [
     "mcp",
@@ -61,7 +63,8 @@
     "jest": "^30.4.2",
     "ts-jest": "^29.4.11",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitepress": "^2.0.0-alpha.18"
   },
   "overrides": {
     "@babel/core": "^7.29.6",
