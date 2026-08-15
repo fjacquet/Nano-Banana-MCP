@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { GoogleGenAI } from "@google/genai";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -7,11 +11,7 @@ import {
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import fs from "node:fs/promises";
-import path from "node:path";
-import os from "node:os";
 
 const DEFAULT_MODEL = "gemini-3.1-flash-image";
 const SUPPORTED_MODELS = [
@@ -19,11 +19,23 @@ const SUPPORTED_MODELS = [
   "gemini-2.5-flash-image",
   "gemini-3-pro-image",
 ] as const;
-type SupportedModel = typeof SUPPORTED_MODELS[number];
+type SupportedModel = (typeof SUPPORTED_MODELS)[number];
 
 const VALID_ASPECT_RATIOS = [
-  "1:1", "1:4", "1:8", "2:3", "3:2", "3:4", "4:1", "4:3",
-  "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
+  "1:1",
+  "1:4",
+  "1:8",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:1",
+  "4:3",
+  "4:5",
+  "5:4",
+  "8:1",
+  "9:16",
+  "16:9",
+  "21:9",
 ] as const;
 const VALID_IMAGE_SIZES = ["512px", "1K", "2K", "4K"] as const;
 
@@ -40,23 +52,41 @@ type Config = z.infer<typeof ConfigSchema>;
 
 const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image" (Nano Banana Pro, highest quality)`;
 
-const ModelOpt = z.enum(SUPPORTED_MODELS).optional().describe(MODEL_DESCRIPTION);
-const AspectRatioOpt = z.enum(VALID_ASPECT_RATIOS).optional()
+const ModelOpt = z
+  .enum(SUPPORTED_MODELS)
+  .optional()
+  .describe(MODEL_DESCRIPTION);
+const AspectRatioOpt = z
+  .enum(VALID_ASPECT_RATIOS)
+  .optional()
   .describe(`Aspect ratio of the output image. Default: "1:1"`);
-const ImageSizeOpt = z.enum(VALID_IMAGE_SIZES).optional()
-  .describe(`Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`);
+const ImageSizeOpt = z
+  .enum(VALID_IMAGE_SIZES)
+  .optional()
+  .describe(
+    `Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`,
+  );
 
 const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image";
 
-const UseGoogleSearchOpt = z.boolean().optional()
-  .describe(`Enable Google Search grounding for fact-aware image generation. Only supported on "${GROUNDING_MODEL}".`);
+const UseGoogleSearchOpt = z
+  .boolean()
+  .optional()
+  .describe(
+    `Enable Google Search grounding for fact-aware image generation. Only supported on "${GROUNDING_MODEL}".`,
+  );
 
 const ConfigureGeminiShape = {
-  apiKey: z.string().min(1).describe("Your Gemini API key from Google AI Studio"),
+  apiKey: z
+    .string()
+    .min(1)
+    .describe("Your Gemini API key from Google AI Studio"),
 };
 
 const GenerateImageShape = {
-  prompt: z.string().describe("Text prompt describing the NEW image to create from scratch"),
+  prompt: z
+    .string()
+    .describe("Text prompt describing the NEW image to create from scratch"),
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
@@ -64,10 +94,20 @@ const GenerateImageShape = {
 };
 
 const EditImageShape = {
-  imagePath: z.string().describe("Full file path to the main image file to edit"),
-  prompt: z.string().describe("Text describing the modifications to make to the existing image"),
-  referenceImages: z.array(z.string()).optional()
-    .describe("Optional array of file paths to additional reference images to use during editing (e.g., for style transfer, adding elements, etc.)"),
+  imagePath: z
+    .string()
+    .describe("Full file path to the main image file to edit"),
+  prompt: z
+    .string()
+    .describe(
+      "Text describing the modifications to make to the existing image",
+    ),
+  referenceImages: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Optional array of file paths to additional reference images to use during editing (e.g., for style transfer, adding elements, etc.)",
+    ),
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
@@ -75,8 +115,12 @@ const EditImageShape = {
 };
 
 const ContinueEditingShape = {
-  prompt: z.string().describe("Text describing the modifications to make to the last image"),
-  referenceImages: z.array(z.string()).optional()
+  prompt: z
+    .string()
+    .describe("Text describing the modifications to make to the last image"),
+  referenceImages: z
+    .array(z.string())
+    .optional()
     .describe("Optional array of file paths to additional reference images"),
   model: ModelOpt,
   aspectRatio: AspectRatioOpt,
@@ -201,7 +245,7 @@ class NanoBananaMCP {
     if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Unsupported image format "${ext}". Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}`
+        `Unsupported image format "${ext}". Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}`,
       );
     }
 
@@ -211,7 +255,7 @@ class NanoBananaMCP {
     } catch {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Image file not found: ${filePath}`
+        `Image file not found: ${filePath}`,
       );
     }
 
@@ -222,21 +266,21 @@ class NanoBananaMCP {
     } catch {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Image file not accessible: ${filePath}`
+        `Image file not accessible: ${filePath}`,
       );
     }
 
     if (!this.isPathInAllowedRoots(realPath)) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Image path is outside allowed roots (home directory, current working directory, or system tmpdir). System file access is blocked.`
+        `Image path is outside allowed roots (home directory, current working directory, or system tmpdir). System file access is blocked.`,
       );
     }
 
     if (stats.size > MAX_IMAGE_SIZE_BYTES) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Image file too large (${Math.round(stats.size / 1024 / 1024)}MB). Maximum: ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`
+        `Image file too large (${Math.round(stats.size / 1024 / 1024)}MB). Maximum: ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`,
       );
     }
   }
@@ -247,8 +291,22 @@ class NanoBananaMCP {
       path.resolve(os.tmpdir()),
     ];
     const cwd = path.resolve(process.cwd());
-    const SYSTEM_PREFIXES = ["/usr/", "/etc", "/var/", "/proc", "/sys", "/dev", "/root", "/boot"];
-    if (cwd !== "/" && !SYSTEM_PREFIXES.some((p) => cwd === p.replace(/\/$/, "") || cwd.startsWith(p))) {
+    const SYSTEM_PREFIXES = [
+      "/usr/",
+      "/etc",
+      "/var/",
+      "/proc",
+      "/sys",
+      "/dev",
+      "/root",
+      "/boot",
+    ];
+    if (
+      cwd !== "/" &&
+      !SYSTEM_PREFIXES.some(
+        (p) => cwd === p.replace(/\/$/, "") || cwd.startsWith(p),
+      )
+    ) {
       roots.push(cwd);
     }
     return roots;
@@ -269,17 +327,26 @@ class NanoBananaMCP {
     }
     throw new McpError(
       ErrorCode.InvalidParams,
-      `Unsupported model "${model}". Supported: ${SUPPORTED_MODELS.join(", ")}`
+      `Unsupported model "${model}". Supported: ${SUPPORTED_MODELS.join(", ")}`,
     );
   }
 
   // --- Shared response builder (DRY) ---
 
   private async buildImageResponse(
-    response: { candidates?: Array<{ content?: { parts?: Array<{ text?: string; inlineData?: { data?: string; mimeType?: string } }> } }> },
+    response: {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{
+            text?: string;
+            inlineData?: { data?: string; mimeType?: string };
+          }>;
+        };
+      }>;
+    },
     prefix: string,
     promptText: string,
-    warnings: string[]
+    warnings: string[],
   ): Promise<CallToolResult> {
     const content: CallToolResult["content"] = [];
     const savedFiles: string[] = [];
@@ -295,7 +362,11 @@ class NanoBananaMCP {
         }
 
         if (part.inlineData?.data) {
-          const saved = await this.saveImage(imagesDir, prefix, part.inlineData.data);
+          const saved = await this.saveImage(
+            imagesDir,
+            prefix,
+            part.inlineData.data,
+          );
           savedFiles.push(saved.filePath);
           this.lastImagePath = saved.filePath;
 
@@ -334,7 +405,7 @@ class NanoBananaMCP {
   private async saveImage(
     imagesDir: string,
     prefix: string,
-    base64Data: string
+    base64Data: string,
   ): Promise<SavedImage> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const randomId = Math.random().toString(36).substring(2, 8);
@@ -371,7 +442,7 @@ class NanoBananaMCP {
       if (error instanceof z.ZodError) {
         throw new McpError(
           ErrorCode.InvalidParams,
-          `Invalid API key: ${error.issues[0]?.message}`
+          `Invalid API key: ${error.issues[0]?.message}`,
         );
       }
       throw error;
@@ -388,7 +459,7 @@ class NanoBananaMCP {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
-        "Gemini API token not configured. Use configure_gemini_token first."
+        "Gemini API token not configured. Use configure_gemini_token first.",
       );
     }
 
@@ -398,12 +469,16 @@ class NanoBananaMCP {
     if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`
+        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`,
       );
     }
 
     try {
-      const config = this.buildGenerationConfig(aspectRatio, imageSize, useGoogleSearch);
+      const config = this.buildGenerationConfig(
+        aspectRatio,
+        imageSize,
+        useGoogleSearch,
+      );
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
@@ -411,17 +486,12 @@ class NanoBananaMCP {
         ...(config && { config }),
       });
 
-      return await this.buildImageResponse(
-        response,
-        "generated",
-        prompt,
-        []
-      );
+      return await this.buildImageResponse(response, "generated", prompt, []);
     } catch (error) {
       if (error instanceof McpError) throw error;
       throw new McpError(
         ErrorCode.InternalError,
-        `Failed to generate image: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to generate image: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -431,9 +501,13 @@ class NanoBananaMCP {
     imageSize?: string,
     useGoogleSearch?: boolean,
   ): { imageConfig?: object; tools?: object[] } | undefined {
-    const imageConfig = (aspectRatio || imageSize)
-      ? { ...(aspectRatio && { aspectRatio }), ...(imageSize && { imageSize }) }
-      : undefined;
+    const imageConfig =
+      aspectRatio || imageSize
+        ? {
+            ...(aspectRatio && { aspectRatio }),
+            ...(imageSize && { imageSize }),
+          }
+        : undefined;
     const tools = useGoogleSearch ? [{ googleSearch: {} }] : undefined;
     if (!imageConfig && !tools) return undefined;
     return {
@@ -446,17 +520,25 @@ class NanoBananaMCP {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
-        "Gemini API token not configured. Use configure_gemini_token first."
+        "Gemini API token not configured. Use configure_gemini_token first.",
       );
     }
 
-    const { imagePath, prompt, referenceImages, model, aspectRatio, imageSize, useGoogleSearch } = args;
+    const {
+      imagePath,
+      prompt,
+      referenceImages,
+      model,
+      aspectRatio,
+      imageSize,
+      useGoogleSearch,
+    } = args;
     const resolvedModel = this.resolveModel(model);
 
     if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`
+        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`,
       );
     }
 
@@ -490,7 +572,7 @@ class NanoBananaMCP {
             });
           } catch (error) {
             warnings.push(
-              `Skipped reference image "${refPath}": ${error instanceof Error ? error.message : String(error)}`
+              `Skipped reference image "${refPath}": ${error instanceof Error ? error.message : String(error)}`,
             );
           }
         }
@@ -498,7 +580,11 @@ class NanoBananaMCP {
 
       imageParts.push({ text: prompt });
 
-      const config = this.buildGenerationConfig(aspectRatio, imageSize, useGoogleSearch);
+      const config = this.buildGenerationConfig(
+        aspectRatio,
+        imageSize,
+        useGoogleSearch,
+      );
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
@@ -510,13 +596,13 @@ class NanoBananaMCP {
         response,
         "edited",
         prompt,
-        warnings
+        warnings,
       );
     } catch (error) {
       if (error instanceof McpError) throw error;
       throw new McpError(
         ErrorCode.InternalError,
-        `Failed to edit image: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to edit image: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -568,14 +654,14 @@ For the most secure setup, add this to your MCP configuration:
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
-        "Gemini API token not configured. Use configure_gemini_token first."
+        "Gemini API token not configured. Use configure_gemini_token first.",
       );
     }
 
     if (!this.lastImagePath) {
       throw new McpError(
         ErrorCode.InvalidRequest,
-        "No previous image found. Please generate or edit an image first."
+        "No previous image found. Please generate or edit an image first.",
       );
     }
 
@@ -584,7 +670,7 @@ For the most secure setup, add this to your MCP configuration:
     } catch {
       throw new McpError(
         ErrorCode.InvalidRequest,
-        `Last image file not found at: ${this.lastImagePath}. Please generate a new image first.`
+        `Last image file not found at: ${this.lastImagePath}. Please generate a new image first.`,
       );
     }
 
