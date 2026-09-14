@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.0.4] - 2026-09-14
+
+### Security
+- Bumped `hono` 4.13.1 → 4.13.7 and `js-yaml` 4.3.1 → 4.3.2 (dev-only,
+  transitive via ts-jest), clearing four OSV findings that were failing the
+  `osv-scan` job on `main`: GHSA-crvj-82cr-hjcx, GHSA-g6gw-c38x-mqfc,
+  GHSA-gqvv-2mrq-wpjv and GHSA-2883-xcg3-v3hh.
+
+### Changed
+- Updated `@google/genai` 2.8.0 → 2.22.0. No API surface change — the server
+  uses `new GoogleGenAI({ apiKey })` and the models call, both unchanged.
+- Refreshed in-range tooling: `@biomejs/biome`, `jest`, `@jest/globals`,
+  `ts-jest`, `tsx`, `zod`, `@modelcontextprotocol/sdk`, `@types/node`.
+
+### Fixed
+- `test-integration.ts` no longer asserts a project layout that was removed:
+  it checked for `.eslintrc.json` (replaced by Biome) and required `dotenv`
+  as a dependency, which had been deliberately dropped because it pollutes
+  stdout and breaks the MCP JSON-RPC stream. `dotenv` is now asserted as a
+  *forbidden* dependency so that regression cannot return.
+
+### Removed
+- Tool-generated agent configuration that had been fanned out across five
+  IDEs: `.cursorrules`, `.windsurfrules`, `GEMINI.md`, `AGENTS.md`,
+  `.cursor/`, `.kiro/` and `.opencode.json`. All were byte-for-byte
+  duplicates. The 140-line RTK block duplicated into `CLAUDE.md` was dropped
+  as well; `.claude/` and `.mcp.json` are now tracked instead.
+
 ## [3.0.0] - 2026-06-07
 
 ### Changed (BREAKING)
