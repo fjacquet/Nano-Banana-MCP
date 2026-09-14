@@ -43,7 +43,7 @@ class IntegrationTester {
       "src/index.ts",
       "README.md",
       ".gitignore",
-      ".eslintrc.json",
+      "biome.json",
     ];
 
     for (const file of requiredFiles) {
@@ -65,7 +65,6 @@ class IntegrationTester {
       const requiredDeps = [
         "@modelcontextprotocol/sdk",
         "@google/genai",
-        "dotenv",
         "zod",
       ];
 
@@ -74,6 +73,26 @@ class IntegrationTester {
           this.addResult(`Dependencies - ${dep}`, true, `${dep} found`);
         } else {
           this.addResult(`Dependencies - ${dep}`, false, `${dep} missing`);
+        }
+      }
+
+      // dotenv must stay out: it writes to stdout, which corrupts the MCP
+      // JSON-RPC stream on the stdio transport. Removed in 395f016.
+      const forbiddenDeps = ["dotenv"];
+
+      for (const dep of forbiddenDeps) {
+        if (packageJson.dependencies[dep]) {
+          this.addResult(
+            `Dependencies - ${dep}`,
+            false,
+            `${dep} must not be a dependency (pollutes stdout, breaks MCP JSON-RPC)`,
+          );
+        } else {
+          this.addResult(
+            `Dependencies - ${dep}`,
+            true,
+            `${dep} correctly absent`,
+          );
         }
       }
 
