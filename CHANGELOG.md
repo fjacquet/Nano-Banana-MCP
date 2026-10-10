@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.0.5] - 2026-10-10
+
+### Security
+- Bumped `@modelcontextprotocol/sdk` 1.30.0 → 1.32.1 and raised its declared
+  range floor `^1.29.0` → `^1.32.1`. SDK versions below 1.31.0 are affected by
+  GHSA-6qxp-vccf-f47h (high, OAuth client could send credentials to an
+  authorization server chosen by the MCP server). This server only uses the
+  stdio `Server` side, so the path was not reachable here, but the old floor
+  let consumers resolve an affected version.
+- Refreshed the lockfile to clear the remaining `npm audit` findings.
+  Runtime tree (transitive via the MCP SDK): `proxy-addr` 2.0.8 (critical,
+  GHSA-jqcg-44mw-7w3h), `brace-expansion` 5.0.12 (high), `ip-address` 10.7.3
+  (moderate) and `fast-uri` 3.1.8 (moderate). Dev-only tree: `handlebars`
+  4.7.10 (critical), `source-map-js` 1.2.2 (high) and `vue` /
+  `@vue/server-renderer` 3.5.43 (high, via vitepress).
+
+### Changed
+- Updated `@google/genai` 2.22.0 → 2.28.0 (in range, lockfile only).
+- Refreshed in-range tooling: `@biomejs/biome`, `jest`, `@jest/globals`,
+  `ts-jest`, `tsx`, `@types/node`.
+
 ## [3.0.4] - 2026-09-14
 
 ### Security
