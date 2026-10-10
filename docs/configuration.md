@@ -85,13 +85,15 @@ npx -y github:fjacquet/Nano-Banana-MCP
 
 ## Model Selection
 
-Three models are available:
+Five models are available:
 
 | Model | ID | Use Case |
 |-------|-----|----------|
-| **Nano Banana 2** | `gemini-3.1-flash-image` | Pro quality at Flash speed — default for all tools |
-| **Nano Banana** | `gemini-2.5-flash-image` | Legacy — fast, efficient |
+| **Nano Banana 2.1** | `gemini-nano-banana-2.1` | Pro quality at Flash speed — default for all tools |
 | **Nano Banana Pro** | `gemini-3-pro-image` | Professional quality, advanced reasoning |
+| **Nano Banana 2** | `gemini-3.1-flash-image` | Previous default |
+| **Nano Banana 2 Lite** | `gemini-3.1-flash-lite-image` | Fastest and cheapest — 1K output only, no Google Search grounding |
+| **Nano Banana** | `gemini-2.5-flash-image` | Legacy — shut down by Google on 2027-03-15 |
 
 Pass the `model` parameter to any generation/editing tool to select the model.
 

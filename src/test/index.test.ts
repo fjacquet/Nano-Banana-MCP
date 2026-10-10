@@ -62,20 +62,24 @@ describe("Nano-banana MCP Server", () => {
   describe("Image Generation", () => {
     test("should use correct default model name", () => {
       const prompt = "A cute nano-banana in a lab setting";
-      const expectedModel = "gemini-3.1-flash-image";
+      const expectedModel = "gemini-nano-banana-2.1";
 
       expect(prompt).toContain("nano-banana");
-      expect(expectedModel).toBe("gemini-3.1-flash-image");
+      expect(expectedModel).toBe("gemini-nano-banana-2.1");
     });
 
     test("should support pro model selection", () => {
       const supportedModels = [
+        "gemini-nano-banana-2.1",
         "gemini-3.1-flash-image",
+        "gemini-3.1-flash-lite-image",
         "gemini-2.5-flash-image",
         "gemini-3-pro-image",
       ];
 
+      expect(supportedModels).toContain("gemini-nano-banana-2.1");
       expect(supportedModels).toContain("gemini-3.1-flash-image");
+      expect(supportedModels).toContain("gemini-3.1-flash-lite-image");
       expect(supportedModels).toContain("gemini-2.5-flash-image");
       expect(supportedModels).toContain("gemini-3-pro-image");
       expect(supportedModels).not.toContain("gemini-3-pro-image-preview");

@@ -13,9 +13,11 @@ An MCP server for AI image generation and editing using Google Gemini. Works wit
 
 | Brand name | Model ID | Notes |
 |---|---|---|
-| **Nano Banana 2** | `gemini-3.1-flash-image` | Default — pro quality at Flash speed |
+| **Nano Banana 2.1** | `gemini-nano-banana-2.1` | Default — pro quality at Flash speed |
 | **Nano Banana Pro** | `gemini-3-pro-image` | Highest quality, advanced reasoning |
-| **Nano Banana** | `gemini-2.5-flash-image` | Legacy — fast, efficient |
+| **Nano Banana 2** | `gemini-3.1-flash-image` | Previous default |
+| **Nano Banana 2 Lite** | `gemini-3.1-flash-lite-image` | Fastest and cheapest — 1K output only |
+| **Nano Banana** | `gemini-2.5-flash-image` | Legacy — shut down by Google on 2027-03-15 |
 
 ## Quick Start
 
