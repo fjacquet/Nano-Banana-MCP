@@ -18,8 +18,8 @@ hero:
 
 features:
   - icon: 🍌
-    title: Three Gemini models
-    details: Nano Banana 2 for pro quality at Flash speed, Nano Banana Pro for the highest quality, and the legacy Nano Banana for fast and efficient runs.
+    title: Five Gemini models
+    details: Nano Banana 2.1 for pro quality at Flash speed, Nano Banana Pro for the highest quality, Nano Banana 2 Lite for the fastest and cheapest runs, plus Nano Banana 2 and the legacy Nano Banana.
   - icon: ✏️
     title: Iterative editing
     details: Edit an existing image with optional reference images, then keep refining the last result with continue_editing.

@@ -207,6 +207,9 @@ class IntegrationTester {
         "continue_editing",
         "get_last_image_info",
         "GoogleGenAI",
+        "gemini-nano-banana-2.1",
+        "gemini-3.1-flash-image",
+        "gemini-3.1-flash-lite-image",
         "gemini-2.5-flash-image",
         "gemini-3-pro-image",
       ];

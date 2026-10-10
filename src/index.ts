@@ -13,9 +13,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-const DEFAULT_MODEL = "gemini-3.1-flash-image";
+const DEFAULT_MODEL = "gemini-nano-banana-2.1";
 const SUPPORTED_MODELS = [
   DEFAULT_MODEL,
+  "gemini-3.1-flash-image",
+  "gemini-3.1-flash-lite-image",
   "gemini-2.5-flash-image",
   "gemini-3-pro-image",
 ] as const;
@@ -50,7 +52,7 @@ const ConfigSchema = z.object({
 
 type Config = z.infer<typeof ConfigSchema>;
 
-const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2 — fast + pro quality), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image" (Nano Banana Pro, highest quality)`;
+const MODEL_DESCRIPTION = `Model to use. "${DEFAULT_MODEL}" (default, Nano Banana 2.1 — pro quality at Flash speed), "gemini-3.1-flash-image" (Nano Banana 2, previous default), "gemini-3.1-flash-lite-image" (Nano Banana 2 Lite — fastest and cheapest, 1K output only), "gemini-2.5-flash-image" (legacy fast), or "gemini-3-pro-image" (Nano Banana Pro, highest quality)`;
 
 const ModelOpt = z
   .enum(SUPPORTED_MODELS)
