@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.1.0] - 2026-10-10
+
+### Added
+- `gemini-nano-banana-2.1` (Nano Banana 2.1, GA 2026-10-06).
+- `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite): fastest and cheapest,
+  1K output only, no Google Search grounding. Google's suggested successor
+  to `gemini-2.5-flash-image`, which shuts down 2027-03-15.
+
+### Changed
+- **Default model is now `gemini-nano-banana-2.1`** (was
+  `gemini-3.1-flash-image`, which Google now lists as superseded by 2.1).
+  Calls that omit `model` get 2.1; pass
+  `model: "gemini-3.1-flash-image"` to keep the previous behaviour. Google
+  Search grounding remains restricted to `gemini-3-pro-image`.
+- README, docs and `CLAUDE.md` updated to the current model list and
+  architecture.
+
 ## [3.0.5] - 2026-10-10
 
 ### Security
