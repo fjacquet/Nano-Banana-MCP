@@ -27,6 +27,7 @@ class IntegrationTester {
       await this.testDependencies();
       await this.testBuildProcess();
       await this.testServerVersion();
+      await this.testGenerateForwardsOptions();
       await this.testConfigurationHandling();
       await this.testToolSchema();
 
@@ -201,6 +202,77 @@ class IntegrationTester {
           },
         })}\n`,
       );
+    });
+  }
+
+  // generate_image once forwarded only some of its inputs to the handler,
+  // silently dropping useGoogleSearch and thinkingLevel. Grounding on a
+  // non-Pro model must be rejected before any API call, so a fake key is enough.
+  private async testGenerateForwardsOptions(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const server = spawn("node", ["dist/index.js"], {
+        stdio: "pipe",
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          GEMINI_API_KEY: "fake-key-for-integration-test",
+        },
+      });
+      let output = "";
+
+      const finish = (passed: boolean, message: string) => {
+        clearTimeout(timer);
+        server.kill();
+        this.addResult("generate_image forwards options", passed, message);
+        resolve();
+      };
+      const timer = setTimeout(
+        () => finish(false, "generate_image: no reply within 15s"),
+        15000,
+      );
+
+      server.stdout?.on("data", (data) => {
+        output += data.toString();
+        const lines = output.split("\n");
+        lines.pop(); // drop the incomplete tail
+        const reply = lines.find((l) => l.includes('"id":2'));
+        if (!reply) return;
+        const text = JSON.stringify(JSON.parse(reply));
+        const rejected = text.includes(
+          "Google Search grounding requires model",
+        );
+        finish(
+          rejected,
+          rejected
+            ? "generate_image forwards useGoogleSearch (grounding check ran)"
+            : `generate_image ignored useGoogleSearch: ${text.slice(0, 160)}`,
+        );
+      });
+
+      const send = (msg: object) =>
+        server.stdin?.write(`${JSON.stringify({ jsonrpc: "2.0", ...msg })}\n`);
+      send({
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "integration-test", version: "0" },
+        },
+      });
+      send({ method: "notifications/initialized" });
+      send({
+        id: 2,
+        method: "tools/call",
+        params: {
+          name: "generate_image",
+          arguments: {
+            prompt: "test",
+            model: "gemini-3.1-flash-image",
+            useGoogleSearch: true,
+          },
+        },
+      });
     });
   }
 

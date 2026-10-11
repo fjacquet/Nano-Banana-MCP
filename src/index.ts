@@ -200,8 +200,7 @@ class NanoBananaMCP {
           "Generate a NEW image from text prompt. Use this ONLY when creating a completely new image, not when modifying an existing one.",
         inputSchema: GenerateImageShape,
       },
-      async ({ prompt, model, aspectRatio, imageSize }) =>
-        this.generateImage({ prompt, model, aspectRatio, imageSize }),
+      async (args) => this.generateImage(args),
     );
 
     this.server.registerTool(

@@ -38,6 +38,7 @@ Server: `src/index.ts`, class `NanoBananaMCP`. `src/image-mime.ts` holds the one
 - `validateImagePath()` enforces allowed extensions, the 20MB limit, and allowed roots (home, tmpdir, cwd unless cwd is a system path)
 - `buildImageResponse()` / `saveImage()` are shared by the generate and edit flows; images go to `<cwd>/generated_imgs`, falling back to `~/nano-banana-images` when cwd is a system or temp path
 - `resolveModel()` validates the optional model parameter against `SUPPORTED_MODELS`; `buildGenerationConfig()` maps `aspectRatio` / `imageSize` / `useGoogleSearch` to the request config
+- Tool handlers pass the whole parsed `args` object through. A handler that picks fields by name silently drops new options; `test-integration.ts` guards this for `generate_image`.
 
 ## Key Technical Details
 
