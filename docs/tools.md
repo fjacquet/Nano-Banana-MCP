@@ -7,7 +7,8 @@ Create a new image from a text prompt.
 ```typescript
 generate_image({
   prompt: "A futuristic city at night with neon lights",
-  model?: "gemini-nano-banana-2.1" // optional, default
+  model?: "gemini-nano-banana-2.1", // optional, default
+  thinkingLevel?: "high" // optional: "minimal" | "medium" | "high"
 })
 ```
 
@@ -15,6 +16,7 @@ generate_image({
 |-----------|----------|-------------|
 | `prompt` | Yes | Text description of the image to create |
 | `model` | No | `gemini-nano-banana-2.1` (default), `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image`, or `gemini-3-pro-image` |
+| `thinkingLevel` | No | `minimal`, `medium` or `high`: how much the model reasons before drawing. Omit for the model's default (`medium` on Nano Banana 2.1). `gemini-3.1-flash-image` and Lite accept only `minimal` / `high`; `gemini-2.5-flash-image` has no thinking levels. |
 
 ## edit_image
 
@@ -35,6 +37,7 @@ edit_image({
 | `prompt` | Yes | Text describing the modifications |
 | `referenceImages` | No | Array of file paths for style transfer / guidance |
 | `model` | No | Model to use |
+| `thinkingLevel` | No | `minimal`, `medium` or `high`: how much the model reasons before drawing. Omit for the model's default (`medium` on Nano Banana 2.1). `gemini-3.1-flash-image` and Lite accept only `minimal` / `high`; `gemini-2.5-flash-image` has no thinking levels. |
 
 ## continue_editing
 
@@ -53,6 +56,7 @@ continue_editing({
 | `prompt` | Yes | Text describing the modifications |
 | `referenceImages` | No | Array of reference image file paths |
 | `model` | No | Model to use |
+| `thinkingLevel` | No | `minimal`, `medium` or `high`: how much the model reasons before drawing. Omit for the model's default (`medium` on Nano Banana 2.1). `gemini-3.1-flash-image` and Lite accept only `minimal` / `high`; `gemini-2.5-flash-image` has no thinking levels. |
 
 ## get_last_image_info
 

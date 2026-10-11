@@ -37,7 +37,8 @@ Server: `src/index.ts`, class `NanoBananaMCP`. `src/image-mime.ts` holds the one
 - Config priority: `GEMINI_API_KEY` env var (what MCP client `env` blocks set) > `~/.nano-banana-config.json`
 - `validateImagePath()` enforces allowed extensions, the 20MB limit, and allowed roots (home, tmpdir, cwd unless cwd is a system path)
 - `buildImageResponse()` / `saveImage()` are shared by the generate and edit flows; images go to `<cwd>/generated_imgs`, falling back to `~/nano-banana-images` when cwd is a system or temp path
-- `resolveModel()` validates the optional model parameter against `SUPPORTED_MODELS`; `buildGenerationConfig()` maps `aspectRatio` / `imageSize` / `useGoogleSearch` to the request config
+- `resolveModel()` validates the optional model parameter against `SUPPORTED_MODELS`; `buildGenerationConfig()` in `src/generation-config.ts` maps `aspectRatio` / `imageSize` / `useGoogleSearch` / `thinkingLevel` to the request config (`thinkingLevel` is sent upper-cased; Google's API rejects levels a model doesn't support, so there is no per-model table here)
+- Tool handlers pass the whole parsed `args` object through. A handler that picks fields by name silently drops new options; `test-integration.ts` guards this for `generate_image`.
 
 ## Key Technical Details
 
@@ -52,7 +53,7 @@ Server: `src/index.ts`, class `NanoBananaMCP`. `src/image-mime.ts` holds the one
 
 ## Adding or Renaming a Model
 
-Touch all of: `SUPPORTED_MODELS` / `DEFAULT_MODEL` / `MODEL_DESCRIPTION` in `src/index.ts`, `src/test/index.test.ts`, the `requiredElements` list in `test-integration.ts`, `README.md`, `docs/tools.md`, `docs/configuration.md`, `docs/index.md`.
+Touch all of: `SUPPORTED_MODELS` / `DEFAULT_MODEL` / `MODEL_DESCRIPTION` / the `ThinkingLevelOpt` description in `src/index.ts`, `src/test/index.test.ts`, the `requiredElements` list in `test-integration.ts`, `README.md`, `docs/tools.md`, `docs/configuration.md`, `docs/index.md`.
 
 ## Docs Structure
 
