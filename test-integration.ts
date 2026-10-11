@@ -28,6 +28,7 @@ class IntegrationTester {
       await this.testBuildProcess();
       await this.testServerVersion();
       await this.testGenerateForwardsOptions();
+      await this.testRegistryMetadata();
       await this.testConfigurationHandling();
       await this.testToolSchema();
 
@@ -274,6 +275,53 @@ class IntegrationTester {
         },
       });
     });
+  }
+
+  // The MCP Registry rejects a publish unless server.json and the npm
+  // package agree, and `npm version` does not touch server.json.
+  private async testRegistryMetadata(): Promise<void> {
+    try {
+      const read = async (file: string) =>
+        JSON.parse(await fs.readFile(path.join(process.cwd(), file), "utf-8"));
+      const pkg = await read("package.json");
+      const server = await read("server.json");
+      const npmPackage = server.packages?.[0];
+
+      const checks: Array<[string, boolean]> = [
+        ["name matches package.json mcpName", server.name === pkg.mcpName],
+        [
+          "name is in the io.github.fjacquet namespace",
+          String(server.name).startsWith("io.github.fjacquet/"),
+        ],
+        ["version matches package.json", server.version === pkg.version],
+        [
+          "npm identifier matches package.json name",
+          npmPackage?.identifier === pkg.name,
+        ],
+        [
+          "npm package version matches package.json",
+          npmPackage?.version === pkg.version,
+        ],
+        [
+          "description fits the 100-character limit",
+          typeof server.description === "string" &&
+            server.description.length <= 100,
+        ],
+      ];
+      for (const [label, passed] of checks) {
+        this.addResult(
+          `Registry metadata - ${label}`,
+          passed,
+          `server.json ${label}${passed ? "" : " (mismatch)"}`,
+        );
+      }
+    } catch (error) {
+      this.addResult(
+        "Registry metadata",
+        false,
+        `server.json check failed: ${error}`,
+      );
+    }
   }
 
   private async testConfigurationHandling(): Promise<void> {

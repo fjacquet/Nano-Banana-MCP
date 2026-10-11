@@ -66,10 +66,11 @@ VitePress site in `docs/`, deployed to GitHub Pages on push to `main`:
 
 ## Release
 
-1. PR bumping `package.json` with `npm version X.Y.Z --no-git-tag-version` plus a `CHANGELOG.md` entry; merge it.
+1. PR bumping `package.json` with `npm version X.Y.Z --no-git-tag-version`, **both** `version` fields in `server.json` (npm does not touch it; `test-integration.ts` fails on a mismatch), and a `CHANGELOG.md` entry; merge it.
 2. Push an annotated tag `vX.Y.Z` on the merge commit. `release.yml` publishes to npm through `fjacquet/ci` `npm-release.yml` (OIDC trusted publishing).
 3. The tag must equal `v` + `package.json` version or the publish is refused, and npm never allows republishing a version.
 4. The `npm` environment requires reviewer approval before the publish job runs.
+5. After npm succeeds, the `mcp-registry` job publishes `server.json` to the official MCP Registry as `io.github.fjacquet/nano-banana-mcp` (GitHub OIDC, pinned + checksum-verified `mcp-publisher`). The registry checks `server.json` `name` against `mcpName` in the published npm package.
 
 ## Changelog
 

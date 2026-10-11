@@ -11,3 +11,43 @@ jobs:
       contents: write
       id-token: write
     with: { node-version: "24", environment: "npm" }
+
+  # Runs only after the npm publish (and its environment approval) succeeds:
+  # the MCP Registry validates server.json against the published npm package.
+  mcp-registry:
+    needs: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC login to the MCP Registry, no secret needed
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with: { egress-policy: audit }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - name: Check server.json matches the tag
+        run: |
+          test "$(jq -r .version server.json)" = "${GITHUB_REF_NAME#v}"
+          test "$(jq -r '.packages[0].version' server.json)" = "${GITHUB_REF_NAME#v}"
+      # Pinned and checksum-verified rather than "latest", so a publish never runs an unreviewed release.
+      - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: "1.8.1"
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          curl -sSfL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - name: Log in to the MCP Registry
+        run: ./mcp-publisher login github-oidc
+      - name: Publish to the MCP Registry
+        # npm can take a short while to serve a version that was just published.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            ./mcp-publisher publish && exit 0
+            echo "Attempt ${attempt} failed, retrying in 30s"
+            sleep 30
+          done
+          exit 1
