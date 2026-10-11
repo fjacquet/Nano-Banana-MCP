@@ -76,7 +76,7 @@ Shared by `generate_image`, `edit_image` and `continue_editing`. All are optiona
 | Option | Values | Notes |
 |--------|--------|-------|
 | `model` | `gemini-nano-banana-2.1` (default), `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | See [Model Selection](./configuration.md#model-selection). |
-| `aspectRatio` | `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, and the panoramic `1:4`, `4:1`, `1:8`, `8:1` | Omitted, the model picks the shape: in testing every model returned landscape output (about 16:9, e.g. 1376×768). Pass `"1:1"` explicitly for a square image. |
+| `aspectRatio` | `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, and the panoramic `1:4`, `4:1`, `1:8`, `8:1` | Omitted, the model picks the shape: in testing every model returned landscape output for new images (about 16:9, e.g. 1376×768), while edits kept the source image's shape. Pass `"1:1"` explicitly for a square image. |
 | `imageSize` | `512px`, `1K`, `2K`, `4K` | Model default is `1K`. Nano Banana 2 Lite produces `1K` only. |
 | `useGoogleSearch` | `true` / `false` | Grounds the image in live Google Search results (current dates, weather, events). Only `gemini-3-pro-image` is allowed; any other model is rejected before the API is called. |
 | `thinkingLevel` | `minimal`, `medium`, `high` | How much the model reasons before drawing. `high` helps complex prompts (infographics, text in images, several consistent characters) but is slower; `minimal` is fastest and cheapest. Model default is `medium` on Nano Banana 2.1. `gemini-3.1-flash-image` and Lite accept only `minimal` / `high`; `gemini-2.5-flash-image` has no thinking levels. |

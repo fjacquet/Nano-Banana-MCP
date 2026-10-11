@@ -69,7 +69,9 @@ const ModelOpt = z
 const AspectRatioOpt = z
   .enum(VALID_ASPECT_RATIOS)
   .optional()
-  .describe(`Aspect ratio of the output image. Default: "1:1"`);
+  .describe(
+    `Aspect ratio of the output image. Omit to let the model choose: new images usually come out landscape (about 16:9) and edits keep the source image's shape. Pass "1:1" for a square image.`,
+  );
 const ImageSizeOpt = z
   .enum(VALID_IMAGE_SIZES)
   .optional()
