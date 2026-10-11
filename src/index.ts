@@ -13,6 +13,7 @@ import {
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { buildGenerationConfig } from "./generation-config.js";
 import { extensionForMimeType, mimeTypeForPath } from "./image-mime.js";
 
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)(
@@ -46,6 +47,7 @@ const VALID_ASPECT_RATIOS = [
   "21:9",
 ] as const;
 const VALID_IMAGE_SIZES = ["512px", "1K", "2K", "4K"] as const;
+const VALID_THINKING_LEVELS = ["minimal", "medium", "high"] as const;
 
 const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -75,6 +77,13 @@ const ImageSizeOpt = z
     `Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`,
   );
 
+const ThinkingLevelOpt = z
+  .enum(VALID_THINKING_LEVELS)
+  .optional()
+  .describe(
+    `How much the model reasons before drawing. "minimal" is fastest and cheapest; "high" is best for complex prompts (infographics, text in images, several consistent characters). Default: the model's own ("medium" on "${DEFAULT_MODEL}"). "gemini-3.1-flash-image" and "gemini-3.1-flash-lite-image" accept only "minimal" or "high"; "gemini-2.5-flash-image" does not support thinking levels.`,
+  );
+
 const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image";
 
 const UseGoogleSearchOpt = z
@@ -99,6 +108,7 @@ const GenerateImageShape = {
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
+  thinkingLevel: ThinkingLevelOpt,
 };
 
 const EditImageShape = {
@@ -120,6 +130,7 @@ const EditImageShape = {
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
+  thinkingLevel: ThinkingLevelOpt,
 };
 
 const ContinueEditingShape = {
@@ -134,6 +145,7 @@ const ContinueEditingShape = {
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
+  thinkingLevel: ThinkingLevelOpt,
 };
 
 interface ImagePart {
@@ -163,6 +175,7 @@ interface EditImageArgs {
   aspectRatio?: string;
   imageSize?: string;
   useGoogleSearch?: boolean;
+  thinkingLevel?: string;
 }
 
 class NanoBananaMCP {
@@ -464,6 +477,7 @@ class NanoBananaMCP {
     aspectRatio?: string;
     imageSize?: string;
     useGoogleSearch?: boolean;
+    thinkingLevel?: string;
   }): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
@@ -472,7 +486,14 @@ class NanoBananaMCP {
       );
     }
 
-    const { prompt, model, aspectRatio, imageSize, useGoogleSearch } = args;
+    const {
+      prompt,
+      model,
+      aspectRatio,
+      imageSize,
+      useGoogleSearch,
+      thinkingLevel,
+    } = args;
     const resolvedModel = this.resolveModel(model);
 
     if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
@@ -483,11 +504,12 @@ class NanoBananaMCP {
     }
 
     try {
-      const config = this.buildGenerationConfig(
+      const config = buildGenerationConfig({
         aspectRatio,
         imageSize,
         useGoogleSearch,
-      );
+        thinkingLevel,
+      });
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
@@ -503,26 +525,6 @@ class NanoBananaMCP {
         `Failed to generate image: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  }
-
-  private buildGenerationConfig(
-    aspectRatio?: string,
-    imageSize?: string,
-    useGoogleSearch?: boolean,
-  ): { imageConfig?: object; tools?: object[] } | undefined {
-    const imageConfig =
-      aspectRatio || imageSize
-        ? {
-            ...(aspectRatio && { aspectRatio }),
-            ...(imageSize && { imageSize }),
-          }
-        : undefined;
-    const tools = useGoogleSearch ? [{ googleSearch: {} }] : undefined;
-    if (!imageConfig && !tools) return undefined;
-    return {
-      ...(imageConfig && { imageConfig }),
-      ...(tools && { tools }),
-    };
   }
 
   private async editImage(args: EditImageArgs): Promise<CallToolResult> {
@@ -541,6 +543,7 @@ class NanoBananaMCP {
       aspectRatio,
       imageSize,
       useGoogleSearch,
+      thinkingLevel,
     } = args;
     const resolvedModel = this.resolveModel(model);
 
@@ -589,11 +592,12 @@ class NanoBananaMCP {
 
       imageParts.push({ text: prompt });
 
-      const config = this.buildGenerationConfig(
+      const config = buildGenerationConfig({
         aspectRatio,
         imageSize,
         useGoogleSearch,
-      );
+        thinkingLevel,
+      });
 
       const response = await this.genAI!.models.generateContent({
         model: resolvedModel,
@@ -659,6 +663,7 @@ For the most secure setup, add this to your MCP configuration:
     model?: string;
     aspectRatio?: string;
     imageSize?: string;
+    thinkingLevel?: string;
   }): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
