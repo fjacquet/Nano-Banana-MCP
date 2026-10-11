@@ -6,12 +6,12 @@
     "url": "https://github.com/fjacquet/Nano-Banana-MCP",
     "source": "github"
   },
-  "version": "3.2.0",
+  "version": "3.2.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@fjacquet/nano-banana-mcp",
-      "version": "3.2.0",
+      "version": "3.2.1",
       "transport": {
         "type": "stdio"
       },

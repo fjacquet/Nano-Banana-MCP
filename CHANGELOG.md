@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.2.1] - 2026-10-11
+
+### Added
+- Listed on the official MCP Registry as
+  `io.github.fjacquet/nano-banana-mcp`. `package.json` carries `mcpName`,
+  `server.json` describes the npm package, and every release tag now
+  publishes to the registry after the npm publish succeeds.
+
+### Fixed
+- The `aspectRatio` input no longer claims a `"1:1"` default. When omitted
+  the model chooses: new images usually come out landscape (about 16:9) and
+  edits keep the source image's shape. Pass `"1:1"` for a square image.
+
 ## [3.2.0] - 2026-10-11
 
 ### Added

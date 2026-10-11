@@ -1,6 +1,6 @@
 {
   "name": "@fjacquet/nano-banana-mcp",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "mcpName": "io.github.fjacquet/nano-banana-mcp",
   "description": "MCP server for AI image generation and editing using Google Gemini (Flash + Pro models)",
   "main": "dist/index.js",
