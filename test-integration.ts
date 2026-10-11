@@ -241,11 +241,16 @@ class IntegrationTester {
         );
       }
 
+      const mimeSource = await fs.readFile(
+        path.join(process.cwd(), "src", "image-mime.ts"),
+        "utf-8",
+      );
       const hasMimeTypeLogic =
-        sourceCode.includes("getMimeType") &&
-        sourceCode.includes("image/jpeg") &&
-        sourceCode.includes("image/png") &&
-        sourceCode.includes("image/gif");
+        mimeSource.includes("mimeTypeForPath") &&
+        mimeSource.includes("extensionForMimeType") &&
+        mimeSource.includes("image/jpeg") &&
+        mimeSource.includes("image/png") &&
+        mimeSource.includes("image/gif");
 
       this.addResult(
         "MIME type handling",

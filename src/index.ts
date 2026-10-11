@@ -12,6 +12,7 @@ import {
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { extensionForMimeType, mimeTypeForPath } from "./image-mime.js";
 
 const DEFAULT_MODEL = "gemini-nano-banana-2.1";
 const SUPPORTED_MODELS = [
@@ -368,6 +369,7 @@ class NanoBananaMCP {
             imagesDir,
             prefix,
             part.inlineData.data,
+            part.inlineData.mimeType,
           );
           savedFiles.push(saved.filePath);
           this.lastImagePath = saved.filePath;
@@ -375,7 +377,7 @@ class NanoBananaMCP {
           content.push({
             type: "image" as const,
             data: part.inlineData.data,
-            mimeType: part.inlineData.mimeType || "image/png",
+            mimeType: saved.mimeType,
           });
         }
       }
@@ -408,16 +410,17 @@ class NanoBananaMCP {
     imagesDir: string,
     prefix: string,
     base64Data: string,
+    mimeType?: string,
   ): Promise<SavedImage> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const randomId = Math.random().toString(36).substring(2, 8);
-    const fileName = `${prefix}-${timestamp}-${randomId}.png`;
+    const fileName = `${prefix}-${timestamp}-${randomId}${extensionForMimeType(mimeType)}`;
     const filePath = path.join(imagesDir, fileName);
 
     const imageBuffer = Buffer.from(base64Data, "base64");
     await fs.writeFile(filePath, imageBuffer);
 
-    return { filePath, base64: base64Data, mimeType: "image/png" };
+    return { filePath, base64: base64Data, mimeType: mimeType || "image/png" };
   }
 
   // --- Tool implementations ---
@@ -548,7 +551,7 @@ class NanoBananaMCP {
 
     try {
       const imageBuffer = await fs.readFile(imagePath);
-      const mimeType = this.getMimeType(imagePath);
+      const mimeType = mimeTypeForPath(imagePath);
 
       const imageParts: ContentPart[] = [
         {
@@ -569,7 +572,7 @@ class NanoBananaMCP {
             imageParts.push({
               inlineData: {
                 data: refBuffer.toString("base64"),
-                mimeType: this.getMimeType(refPath),
+                mimeType: mimeTypeForPath(refPath),
               },
             });
           } catch (error) {
@@ -722,18 +725,6 @@ For the most secure setup, add this to your MCP configuration:
 
   private ensureConfigured(): boolean {
     return this.config !== null && this.genAI !== null;
-  }
-
-  private getMimeType(filePath: string): string {
-    const ext = path.extname(filePath).toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".png": "image/png",
-      ".webp": "image/webp",
-      ".gif": "image/gif",
-    };
-    return mimeTypes[ext] || "image/jpeg";
   }
 
   private getImagesDirectory(): string {
