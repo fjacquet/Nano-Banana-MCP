@@ -26,6 +26,7 @@ class IntegrationTester {
       await this.testProjectStructure();
       await this.testDependencies();
       await this.testBuildProcess();
+      await this.testServerVersion();
       await this.testConfigurationHandling();
       await this.testToolSchema();
 
@@ -156,6 +157,53 @@ class IntegrationTester {
     });
   }
 
+  private async testServerVersion(): Promise<void> {
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(process.cwd(), "package.json"), "utf-8"),
+    );
+
+    return new Promise<void>((resolve) => {
+      const server = spawn("node", ["dist/index.js"], {
+        stdio: "pipe",
+        cwd: process.cwd(),
+      });
+      let output = "";
+
+      const finish = (reported?: string) => {
+        clearTimeout(timer);
+        server.kill();
+        this.addResult(
+          "Server version",
+          reported === pkg.version,
+          `serverInfo.version is ${reported ?? "missing"}, package.json is ${pkg.version}`,
+        );
+        resolve();
+      };
+      const timer = setTimeout(() => finish(), 5000);
+
+      server.stdout?.on("data", (data) => {
+        output += data.toString();
+        const lines = output.split("\n");
+        lines.pop(); // drop the incomplete tail
+        const reply = lines.find((l) => l.includes('"id":1'));
+        if (reply) finish(JSON.parse(reply).result?.serverInfo?.version);
+      });
+
+      server.stdin?.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "integration-test", version: "0" },
+          },
+        })}\n`,
+      );
+    });
+  }
+
   private async testConfigurationHandling(): Promise<void> {
     try {
       const testConfig = {
@@ -241,11 +289,16 @@ class IntegrationTester {
         );
       }
 
+      const mimeSource = await fs.readFile(
+        path.join(process.cwd(), "src", "image-mime.ts"),
+        "utf-8",
+      );
       const hasMimeTypeLogic =
-        sourceCode.includes("getMimeType") &&
-        sourceCode.includes("image/jpeg") &&
-        sourceCode.includes("image/png") &&
-        sourceCode.includes("image/gif");
+        mimeSource.includes("mimeTypeForPath") &&
+        mimeSource.includes("extensionForMimeType") &&
+        mimeSource.includes("image/jpeg") &&
+        mimeSource.includes("image/png") &&
+        mimeSource.includes("image/gif");
 
       this.addResult(
         "MIME type handling",

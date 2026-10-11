@@ -39,7 +39,9 @@ describe("Nano-banana MCP Server", () => {
         geminiApiKey: "test-api-key-123",
       };
 
-      const configPath = path.join(os.homedir(), ".nano-banana-config.json");
+      // Never touch the real ~/.nano-banana-config.json: it may hold the user's key.
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "nano-banana-"));
+      const configPath = path.join(tmpDir, ".nano-banana-config.json");
 
       // Test writing config
       await fs.writeFile(configPath, JSON.stringify(testConfig, null, 2));
@@ -50,12 +52,7 @@ describe("Nano-banana MCP Server", () => {
 
       expect(parsedConfig.geminiApiKey).toBe("test-api-key-123");
 
-      // Cleanup
-      try {
-        await fs.unlink(configPath);
-      } catch {
-        // Ignore if file doesn't exist
-      }
+      await fs.rm(tmpDir, { recursive: true, force: true });
     });
   });
 

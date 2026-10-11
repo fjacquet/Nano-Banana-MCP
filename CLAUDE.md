@@ -21,7 +21,7 @@ All are called through `models.generateContent` (not the Interactions API). Chec
 npm run build                # tsc to dist/ + chmod +x
 npm run dev                  # Run directly with tsx (no build step)
 npm start                    # Run compiled dist/index.js
-npm test                     # Jest unit tests (src/test/index.test.ts)
+npm test                     # Jest unit tests (src/test/)
 npx tsx test-integration.ts  # Structure/build/schema checks, no network
 npm run lint                 # Biome lint on src/
 npm run format               # Biome format --write on src/
@@ -31,7 +31,7 @@ npm run docs:dev             # VitePress docs (docs/), docs:build for static out
 
 ## Architecture
 
-Single-file server: `src/index.ts`, class `NanoBananaMCP`:
+Server: `src/index.ts`, class `NanoBananaMCP`. `src/image-mime.ts` holds the one extension ↔ MIME mapping used to name saved images and label images read back. `index.ts` starts the server when imported, so logic that needs unit tests goes in its own module.
 
 - Wraps MCP SDK `McpServer`; the 6 tools are registered with `registerTool()` and Zod input shapes; stdio transport
 - Config priority: `GEMINI_API_KEY` env var (what MCP client `env` blocks set) > `~/.nano-banana-config.json`
