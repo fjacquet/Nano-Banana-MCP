@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
@@ -13,6 +14,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { extensionForMimeType, mimeTypeForPath } from "./image-mime.js";
+
+const { version: PACKAGE_VERSION } = createRequire(import.meta.url)(
+  "../package.json",
+) as { version: string };
 
 const DEFAULT_MODEL = "gemini-nano-banana-2.1";
 const SUPPORTED_MODELS = [
@@ -171,7 +176,7 @@ class NanoBananaMCP {
   constructor() {
     this.server = new McpServer({
       name: "nano-banana-mcp",
-      version: "3.0.0",
+      version: PACKAGE_VERSION,
     });
 
     this.setupHandlers();

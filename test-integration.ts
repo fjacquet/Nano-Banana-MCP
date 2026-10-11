@@ -26,6 +26,7 @@ class IntegrationTester {
       await this.testProjectStructure();
       await this.testDependencies();
       await this.testBuildProcess();
+      await this.testServerVersion();
       await this.testConfigurationHandling();
       await this.testToolSchema();
 
@@ -153,6 +154,53 @@ class IntegrationTester {
         }
         resolve();
       });
+    });
+  }
+
+  private async testServerVersion(): Promise<void> {
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(process.cwd(), "package.json"), "utf-8"),
+    );
+
+    return new Promise<void>((resolve) => {
+      const server = spawn("node", ["dist/index.js"], {
+        stdio: "pipe",
+        cwd: process.cwd(),
+      });
+      let output = "";
+
+      const finish = (reported?: string) => {
+        clearTimeout(timer);
+        server.kill();
+        this.addResult(
+          "Server version",
+          reported === pkg.version,
+          `serverInfo.version is ${reported ?? "missing"}, package.json is ${pkg.version}`,
+        );
+        resolve();
+      };
+      const timer = setTimeout(() => finish(), 5000);
+
+      server.stdout?.on("data", (data) => {
+        output += data.toString();
+        const lines = output.split("\n");
+        lines.pop(); // drop the incomplete tail
+        const reply = lines.find((l) => l.includes('"id":1'));
+        if (reply) finish(JSON.parse(reply).result?.serverInfo?.version);
+      });
+
+      server.stdin?.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "integration-test", version: "0" },
+          },
+        })}\n`,
+      );
     });
   }
 
