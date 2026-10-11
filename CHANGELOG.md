@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.1] - 2026-10-11
+
+### Fixed
+- Saved images now use the extension matching the MIME type Gemini
+  returns. Nano Banana 2.1 and 2 Lite return JPEG, which 3.1.0 saved under
+  a `.png` name; `continue_editing` / `edit_image` then sent those files
+  back labelled `image/png`. Files are now `.jpg` (or `.webp` / `.png`)
+  as appropriate.
+- `serverInfo.version` in the MCP `initialize` reply is read from
+  `package.json`. It had been hard-coded to `3.0.0` through 3.1.0.
+- The unit test for config persistence no longer writes to and deletes
+  the real `~/.nano-banana-config.json`, which wiped an API key saved with
+  `configure_gemini_token` whenever `npm test` ran.
+
 ## [3.1.0] - 2026-10-10
 
 ### Added
