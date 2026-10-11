@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.fjacquet/nano-banana-mcp",
+  "description": "AI image generation and editing with Google Gemini: Nano Banana 2.1, Pro and Lite models",
+  "repository": {
+    "url": "https://github.com/fjacquet/Nano-Banana-MCP",
+    "source": "github"
+  },
+  "version": "3.2.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@fjacquet/nano-banana-mcp",
+      "version": "3.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GEMINI_API_KEY",
+          "description": "Gemini API key from Google AI Studio. Optional: it can also be set later with the configure_gemini_token tool.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
