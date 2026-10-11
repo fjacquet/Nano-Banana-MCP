@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.2.0] - 2026-10-11
+
+### Added
+- `thinkingLevel` option (`"minimal"` | `"medium"` | `"high"`) on
+  `generate_image`, `edit_image` and `continue_editing`: how much the model
+  reasons before drawing. `"high"` helps complex prompts (infographics, text
+  in images, several consistent characters); `"minimal"` is fastest and
+  cheapest. Omit it to keep the model's default (`"medium"` on Nano Banana
+  2.1). `gemini-3.1-flash-image` and Lite accept only `"minimal"` /
+  `"high"`, and `gemini-2.5-flash-image` has no thinking levels; Google's
+  API returns a clear error for unsupported combinations.
+
+### Fixed
+- `generate_image` silently ignored `useGoogleSearch`: its handler forwarded
+  only some inputs, so Google Search grounding never reached the API and the
+  "grounding requires `gemini-3-pro-image`" check never ran. All inputs are
+  now forwarded.
+
 ## [3.1.1] - 2026-10-11
 
 ### Fixed
