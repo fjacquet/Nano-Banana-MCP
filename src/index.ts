@@ -13,8 +13,9 @@ import {
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { buildGenerationConfig } from "./generation-config.js";
+import { buildGenerationConfig, VALID_PRESETS } from "./generation-config.js";
 import { extensionForMimeType, mimeTypeForPath } from "./image-mime.js";
+import { validateImagePath } from "./image-path.js";
 
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)(
   "../package.json",
@@ -49,9 +50,6 @@ const VALID_ASPECT_RATIOS = [
 const VALID_IMAGE_SIZES = ["512px", "1K", "2K", "4K"] as const;
 const VALID_THINKING_LEVELS = ["minimal", "medium", "high"] as const;
 
-const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
-const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
-
 const CONFIG_FILE_NAME = ".nano-banana-config.json";
 
 const ConfigSchema = z.object({
@@ -66,6 +64,12 @@ const ModelOpt = z
   .enum(SUPPORTED_MODELS)
   .optional()
   .describe(MODEL_DESCRIPTION);
+const PresetOpt = z
+  .enum(VALID_PRESETS)
+  .optional()
+  .describe(
+    `Shape by use: "web" (16:9 landscape), "phone" (9:16 portrait), "webconf" (16:9 video-call background for Zoom/Teams), "banner" (4:1 wide strip, e.g. LinkedIn banner), "square" (1:1). Overridden by aspectRatio when both are given. Size is set with imageSize.`,
+  );
 const AspectRatioOpt = z
   .enum(VALID_ASPECT_RATIOS)
   .optional()
@@ -107,6 +111,7 @@ const GenerateImageShape = {
     .string()
     .describe("Text prompt describing the NEW image to create from scratch"),
   model: ModelOpt,
+  preset: PresetOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
@@ -129,6 +134,7 @@ const EditImageShape = {
       "Optional array of file paths to additional reference images to use during editing (e.g., for style transfer, adding elements, etc.)",
     ),
   model: ModelOpt,
+  preset: PresetOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
@@ -144,6 +150,7 @@ const ContinueEditingShape = {
     .optional()
     .describe("Optional array of file paths to additional reference images"),
   model: ModelOpt,
+  preset: PresetOpt,
   aspectRatio: AspectRatioOpt,
   imageSize: ImageSizeOpt,
   useGoogleSearch: UseGoogleSearchOpt,
@@ -169,16 +176,9 @@ interface SavedImage {
   mimeType: string;
 }
 
-interface EditImageArgs {
-  imagePath: string;
-  prompt: string;
-  referenceImages?: string[];
-  model?: string;
-  aspectRatio?: string;
-  imageSize?: string;
-  useGoogleSearch?: boolean;
-  thinkingLevel?: string;
-}
+type GenerateImageArgs = z.infer<z.ZodObject<typeof GenerateImageShape>>;
+type EditImageArgs = z.infer<z.ZodObject<typeof EditImageShape>>;
+type ContinueEditingArgs = z.infer<z.ZodObject<typeof ContinueEditingShape>>;
 
 class NanoBananaMCP {
   private server: McpServer;
@@ -259,88 +259,6 @@ class NanoBananaMCP {
   }
 
   // --- Validation helpers ---
-
-  private async validateImagePath(filePath: string): Promise<void> {
-    const resolved = path.resolve(filePath);
-    const ext = path.extname(resolved).toLowerCase();
-
-    if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Unsupported image format "${ext}". Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}`,
-      );
-    }
-
-    let stats: Awaited<ReturnType<typeof fs.stat>>;
-    try {
-      stats = await fs.stat(resolved);
-    } catch {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Image file not found: ${filePath}`,
-      );
-    }
-
-    // Canonicalize to defeat symlink-based escapes, then sandbox-check.
-    let realPath: string;
-    try {
-      realPath = await fs.realpath(resolved);
-    } catch {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Image file not accessible: ${filePath}`,
-      );
-    }
-
-    if (!this.isPathInAllowedRoots(realPath)) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Image path is outside allowed roots (home directory, current working directory, or system tmpdir). System file access is blocked.`,
-      );
-    }
-
-    if (stats.size > MAX_IMAGE_SIZE_BYTES) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Image file too large (${Math.round(stats.size / 1024 / 1024)}MB). Maximum: ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`,
-      );
-    }
-  }
-
-  private getAllowedPathRoots(): string[] {
-    const roots: string[] = [
-      path.resolve(os.homedir()),
-      path.resolve(os.tmpdir()),
-    ];
-    const cwd = path.resolve(process.cwd());
-    const SYSTEM_PREFIXES = [
-      "/usr/",
-      "/etc",
-      "/var/",
-      "/proc",
-      "/sys",
-      "/dev",
-      "/root",
-      "/boot",
-    ];
-    if (
-      cwd !== "/" &&
-      !SYSTEM_PREFIXES.some(
-        (p) => cwd === p.replace(/\/$/, "") || cwd.startsWith(p),
-      )
-    ) {
-      roots.push(cwd);
-    }
-    return roots;
-  }
-
-  private isPathInAllowedRoots(resolved: string): boolean {
-    return this.getAllowedPathRoots().some((root) => {
-      if (resolved === root) return true;
-      const prefix = root.endsWith(path.sep) ? root : root + path.sep;
-      return resolved.startsWith(prefix);
-    });
-  }
 
   private resolveModel(model?: string): SupportedModel {
     if (!model) return DEFAULT_MODEL;
@@ -473,14 +391,9 @@ class NanoBananaMCP {
     }
   }
 
-  private async generateImage(args: {
-    prompt: string;
-    model?: string;
-    aspectRatio?: string;
-    imageSize?: string;
-    useGoogleSearch?: boolean;
-    thinkingLevel?: string;
-  }): Promise<CallToolResult> {
+  private async generateImage(
+    args: GenerateImageArgs,
+  ): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -491,6 +404,7 @@ class NanoBananaMCP {
     const {
       prompt,
       model,
+      preset,
       aspectRatio,
       imageSize,
       useGoogleSearch,
@@ -507,6 +421,7 @@ class NanoBananaMCP {
 
     try {
       const config = buildGenerationConfig({
+        preset,
         aspectRatio,
         imageSize,
         useGoogleSearch,
@@ -542,6 +457,7 @@ class NanoBananaMCP {
       prompt,
       referenceImages,
       model,
+      preset,
       aspectRatio,
       imageSize,
       useGoogleSearch,
@@ -556,7 +472,7 @@ class NanoBananaMCP {
       );
     }
 
-    await this.validateImagePath(imagePath);
+    await validateImagePath(imagePath);
 
     try {
       const imageBuffer = await fs.readFile(imagePath);
@@ -576,7 +492,7 @@ class NanoBananaMCP {
       if (referenceImages && referenceImages.length > 0) {
         for (const refPath of referenceImages) {
           try {
-            await this.validateImagePath(refPath);
+            await validateImagePath(refPath);
             const refBuffer = await fs.readFile(refPath);
             imageParts.push({
               inlineData: {
@@ -595,6 +511,7 @@ class NanoBananaMCP {
       imageParts.push({ text: prompt });
 
       const config = buildGenerationConfig({
+        preset,
         aspectRatio,
         imageSize,
         useGoogleSearch,
@@ -659,14 +576,9 @@ For the most secure setup, add this to your MCP configuration:
     };
   }
 
-  private async continueEditing(args: {
-    prompt: string;
-    referenceImages?: string[];
-    model?: string;
-    aspectRatio?: string;
-    imageSize?: string;
-    thinkingLevel?: string;
-  }): Promise<CallToolResult> {
+  private async continueEditing(
+    args: ContinueEditingArgs,
+  ): Promise<CallToolResult> {
     if (!this.ensureConfigured()) {
       throw new McpError(
         ErrorCode.InvalidRequest,

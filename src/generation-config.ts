@@ -1,4 +1,23 @@
+export const PRESET_ASPECT_RATIOS = {
+  web: "16:9",
+  phone: "9:16",
+  webconf: "16:9",
+  banner: "4:1",
+  square: "1:1",
+} as const;
+
+export const VALID_PRESETS = [
+  "web",
+  "phone",
+  "webconf",
+  "banner",
+  "square",
+] as const;
+
+export type Preset = (typeof VALID_PRESETS)[number];
+
 export interface GenerationOptions {
+  preset?: Preset;
   aspectRatio?: string;
   imageSize?: string;
   useGoogleSearch?: boolean;
@@ -6,13 +25,17 @@ export interface GenerationOptions {
 }
 
 export function buildGenerationConfig({
-  aspectRatio,
+  preset,
+  aspectRatio: explicitAspectRatio,
   imageSize,
   useGoogleSearch,
   thinkingLevel,
 }: GenerationOptions):
   | { imageConfig?: object; tools?: object[]; thinkingConfig?: object }
   | undefined {
+  // An explicit aspectRatio wins over the preset.
+  const aspectRatio =
+    explicitAspectRatio ?? (preset && PRESET_ASPECT_RATIOS[preset]);
   const imageConfig =
     aspectRatio || imageSize
       ? {

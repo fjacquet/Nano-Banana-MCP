@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `preset` option (`"web"` | `"phone"` | `"webconf"` | `"banner"` | `"square"`)
+  on `generate_image`, `edit_image` and `continue_editing`: picks 16:9, 9:16,
+  16:9 (video-call background), 4:1 (LinkedIn banner) or 1:1. An explicit
+  `aspectRatio` wins when both are given. Size stays `imageSize`.
+
+### Fixed
+- Images in the system tmp folder were rejected as "outside allowed roots"
+  on macOS, where tmpdir is a symlink. The allowed roots are now resolved
+  with `realpath` before the check.
+
+### Changed
+- Path validation moved to `src/image-path.ts` and now has unit tests. The
+  old `src/test/index.test.ts` tested only its own mocks and was removed.
+- Removed `.env.example`: the server does not read `.env`.
+
 ## [3.2.1] - 2026-10-11
 
 ### Added

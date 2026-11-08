@@ -20,3 +20,5 @@ export function extensionForMimeType(mimeType?: string): string {
   );
   return match ? match[0] : ".png";
 }
+
+export const ALLOWED_IMAGE_EXTENSIONS = Object.keys(EXTENSION_TO_MIME_TYPE);

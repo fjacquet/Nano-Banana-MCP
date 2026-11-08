@@ -12,6 +12,24 @@ describe("buildGenerationConfig", () => {
     ).toEqual({ imageConfig: { aspectRatio: "16:9", imageSize: "2K" } });
   });
 
+  test("maps preset to an aspect ratio, explicit aspectRatio wins", () => {
+    expect(buildGenerationConfig({ preset: "web" })).toEqual({
+      imageConfig: { aspectRatio: "16:9" },
+    });
+    expect(buildGenerationConfig({ preset: "phone", imageSize: "2K" })).toEqual(
+      { imageConfig: { aspectRatio: "9:16", imageSize: "2K" } },
+    );
+    expect(buildGenerationConfig({ preset: "banner" })).toEqual({
+      imageConfig: { aspectRatio: "4:1" },
+    });
+    expect(buildGenerationConfig({ preset: "webconf" })).toEqual({
+      imageConfig: { aspectRatio: "16:9" },
+    });
+    expect(
+      buildGenerationConfig({ preset: "web", aspectRatio: "4:3" }),
+    ).toEqual({ imageConfig: { aspectRatio: "4:3" } });
+  });
+
   test("enables Google Search grounding as a tool", () => {
     expect(buildGenerationConfig({ useGoogleSearch: true })).toEqual({
       tools: [{ googleSearch: {} }],
