@@ -9,6 +9,11 @@
   `aspectRatio` wins when both are given. Size stays `imageSize`.
 
 ### Fixed
+- `useGoogleSearch` no longer needs `gemini-3-pro-image`. Checked against the
+  live API: it works on `gemini-nano-banana-2.1` (the default) and
+  `gemini-3.1-flash-image`; only `gemini-3.1-flash-lite-image` is refused.
+- Docs and the `imageSize` description now say `512px` works only on
+  `gemini-3.1-flash-image`; Nano Banana 2.1 rejects it.
 - Images in the system tmp folder were rejected as "outside allowed roots"
   on macOS, where tmpdir is a symlink. The allowed roots are now resolved
   with `realpath` before the check.

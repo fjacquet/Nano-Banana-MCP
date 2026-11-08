@@ -80,7 +80,7 @@ const ImageSizeOpt = z
   .enum(VALID_IMAGE_SIZES)
   .optional()
   .describe(
-    `Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output.`,
+    `Resolution of the output image. Default: "1K". Use "2K" or "4K" for high-resolution output. "512px" works only on "gemini-3.1-flash-image".`,
   );
 
 const ThinkingLevelOpt = z
@@ -90,13 +90,14 @@ const ThinkingLevelOpt = z
     `How much the model reasons before drawing. "minimal" is fastest and cheapest; "high" is best for complex prompts (infographics, text in images, several consistent characters). Default: the model's own ("medium" on "${DEFAULT_MODEL}"). "gemini-3.1-flash-image" and "gemini-3.1-flash-lite-image" accept only "minimal" or "high"; "gemini-2.5-flash-image" does not support thinking levels.`,
   );
 
-const GROUNDING_MODEL: SupportedModel = "gemini-3-pro-image";
+// Google rejects Search grounding on this model (checked against the live API).
+const NO_GROUNDING_MODEL: SupportedModel = "gemini-3.1-flash-lite-image";
 
 const UseGoogleSearchOpt = z
   .boolean()
   .optional()
   .describe(
-    `Enable Google Search grounding for fact-aware image generation. Only supported on "${GROUNDING_MODEL}".`,
+    `Enable Google Search grounding for fact-aware image generation. Not supported on "${NO_GROUNDING_MODEL}".`,
   );
 
 const ConfigureGeminiShape = {
@@ -412,10 +413,10 @@ class NanoBananaMCP {
     } = args;
     const resolvedModel = this.resolveModel(model);
 
-    if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
+    if (useGoogleSearch && resolvedModel === NO_GROUNDING_MODEL) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`,
+        `Google Search grounding is not supported by model "${resolvedModel}".`,
       );
     }
 
@@ -465,10 +466,10 @@ class NanoBananaMCP {
     } = args;
     const resolvedModel = this.resolveModel(model);
 
-    if (useGoogleSearch && resolvedModel !== GROUNDING_MODEL) {
+    if (useGoogleSearch && resolvedModel === NO_GROUNDING_MODEL) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Google Search grounding requires model "${GROUNDING_MODEL}" but got "${resolvedModel}".`,
+        `Google Search grounding is not supported by model "${resolvedModel}".`,
       );
     }
 
