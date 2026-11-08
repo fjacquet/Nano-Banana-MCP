@@ -8,6 +8,10 @@
   16:9 (video-call background), 4:1 (LinkedIn banner) or 1:1. An explicit
   `aspectRatio` wins when both are given. Size stays `imageSize`.
 
+### Changed
+- Tool output lists the Google Search queries the model ran when
+  `useGoogleSearch` is on.
+
 ### Fixed
 - `useGoogleSearch` no longer needs `gemini-3-pro-image`. Checked against the
   live API: it works on `gemini-nano-banana-2.1` (the default) and

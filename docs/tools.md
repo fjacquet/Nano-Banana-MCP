@@ -85,6 +85,8 @@ Shared by `generate_image`, `edit_image` and `continue_editing`. All are optiona
 | `useGoogleSearch` | `true` / `false` | Grounds the image in live Google Search results (current dates, weather, events). Works on every model except `gemini-3.1-flash-lite-image`, which is rejected before the API is called (Google refuses it too). |
 | `thinkingLevel` | `minimal`, `medium`, `high` | How much the model reasons before drawing. `high` helps complex prompts (infographics, text in images, several consistent characters) but is slower; `minimal` is fastest and cheapest. Model default is `medium` on Nano Banana 2.1. `gemini-3.1-flash-image` and Lite accept only `minimal` / `high`; `gemini-2.5-flash-image` has no thinking levels. |
 
+**Output format.** You cannot choose it: the Gemini API does not accept an output format for these models. In testing (Nov 2026) `gemini-nano-banana-2.1`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image` and `gemini-3-pro-image` all returned JPEG whatever the aspect ratio, size or grounding, and only the legacy `gemini-2.5-flash-image` returned PNG. Saved files get the matching extension (`.jpg` or `.png`).
+
 ## get_last_image_info
 
 Get information about the last generated/edited image.
