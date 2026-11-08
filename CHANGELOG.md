@@ -1,16 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [3.3.0] - 2026-11-08
 
 ### Added
+- Tool output lists the Google Search queries the model ran when
+  `useGoogleSearch` is on.
 - `preset` option (`"web"` | `"phone"` | `"webconf"` | `"banner"` | `"square"`)
   on `generate_image`, `edit_image` and `continue_editing`: picks 16:9, 9:16,
   16:9 (video-call background), 4:1 (LinkedIn banner) or 1:1. An explicit
   `aspectRatio` wins when both are given. Size stays `imageSize`.
-
-### Changed
-- Tool output lists the Google Search queries the model ran when
-  `useGoogleSearch` is on.
 
 ### Fixed
 - `useGoogleSearch` no longer needs `gemini-3-pro-image`. Checked against the
@@ -26,6 +24,10 @@
 - Path validation moved to `src/image-path.ts` and now has unit tests. The
   old `src/test/index.test.ts` tested only its own mocks and was removed.
 - Removed `.env.example`: the server does not read `.env`.
+- Dependencies updated within their ranges (body-parser, fast-uri, ip-address,
+  qs, zod, ...) and `minimatch` / `glob` overridden to fixed releases. One
+  dev-only advisory (`deepmerge`, no fix yet) is ignored in
+  `osv-scanner.toml` until 2027-02-08.
 
 ## [3.2.1] - 2026-10-11
 
