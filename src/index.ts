@@ -283,6 +283,7 @@ class NanoBananaMCP {
             inlineData?: { data?: string; mimeType?: string };
           }>;
         };
+        groundingMetadata?: { webSearchQueries?: string[] };
       }>;
     },
     prefix: string,
@@ -325,6 +326,12 @@ class NanoBananaMCP {
 
     if (textContent) {
       statusText += `\n\nDescription: ${textContent}`;
+    }
+
+    const searchQueries =
+      response.candidates?.[0]?.groundingMetadata?.webSearchQueries;
+    if (searchQueries?.length) {
+      statusText += `\n\nGoogle Search queries:\n${searchQueries.map((q) => `- ${q}`).join("\n")}`;
     }
 
     if (warnings.length > 0) {
