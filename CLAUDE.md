@@ -8,9 +8,9 @@ Nano-Banana MCP is a Model Context Protocol server that provides AI image genera
 
 Supported models (`SUPPORTED_MODELS` in `src/index.ts`):
 - `gemini-nano-banana-2.1` (default, `DEFAULT_MODEL`) — Nano Banana 2.1
-- `gemini-3-pro-image` — Nano Banana Pro; the only model allowed with `useGoogleSearch` (`GROUNDING_MODEL`)
+- `gemini-3-pro-image` — Nano Banana Pro, highest quality
 - `gemini-3.1-flash-image` — Nano Banana 2, previous default
-- `gemini-3.1-flash-lite-image` — Nano Banana 2 Lite, 1K output only
+- `gemini-3.1-flash-lite-image` — Nano Banana 2 Lite, 1K output only; the only model refused with `useGoogleSearch` (`NO_GROUNDING_MODEL`)
 - `gemini-2.5-flash-image` — legacy, Google shutdown 2027-03-15
 
 All are called through `models.generateContent` (not the Interactions API). Check Google's deprecations page before changing IDs: https://ai.google.dev/gemini-api/docs/deprecations

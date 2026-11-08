@@ -207,8 +207,8 @@ class IntegrationTester {
   }
 
   // generate_image once forwarded only some of its inputs to the handler,
-  // silently dropping useGoogleSearch and thinkingLevel. Grounding on a
-  // non-Pro model must be rejected before any API call, so a fake key is enough.
+  // silently dropping useGoogleSearch and thinkingLevel. Grounding on
+  // the Lite model must be rejected before any API call, so a fake key is enough.
   private async testGenerateForwardsOptions(): Promise<void> {
     return new Promise<void>((resolve) => {
       const server = spawn("node", ["dist/index.js"], {
@@ -240,7 +240,7 @@ class IntegrationTester {
         if (!reply) return;
         const text = JSON.stringify(JSON.parse(reply));
         const rejected = text.includes(
-          "Google Search grounding requires model",
+          "Google Search grounding is not supported",
         );
         finish(
           rejected,
@@ -269,7 +269,7 @@ class IntegrationTester {
           name: "generate_image",
           arguments: {
             prompt: "test",
-            model: "gemini-3.1-flash-image",
+            model: "gemini-3.1-flash-lite-image",
             useGoogleSearch: true,
           },
         },
