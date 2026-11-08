@@ -3,8 +3,9 @@
 ## [Unreleased]
 
 ### Added
-- `preset` option (`"web"` | `"phone"` | `"square"`) on `generate_image`,
-  `edit_image` and `continue_editing`: picks 16:9, 9:16 or 1:1. An explicit
+- `preset` option (`"web"` | `"phone"` | `"webconf"` | `"banner"` | `"square"`)
+  on `generate_image`, `edit_image` and `continue_editing`: picks 16:9, 9:16,
+  16:9 (video-call background), 4:1 (LinkedIn banner) or 1:1. An explicit
   `aspectRatio` wins when both are given. Size stays `imageSize`.
 
 ### Fixed

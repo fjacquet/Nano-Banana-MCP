@@ -68,7 +68,7 @@ const PresetOpt = z
   .enum(VALID_PRESETS)
   .optional()
   .describe(
-    `Shape by use: "web" (16:9 landscape), "phone" (9:16 portrait), "square" (1:1). Overridden by aspectRatio when both are given. Size is set with imageSize.`,
+    `Shape by use: "web" (16:9 landscape), "phone" (9:16 portrait), "webconf" (16:9 video-call background for Zoom/Teams), "banner" (4:1 wide strip, e.g. LinkedIn banner), "square" (1:1). Overridden by aspectRatio when both are given. Size is set with imageSize.`,
   );
 const AspectRatioOpt = z
   .enum(VALID_ASPECT_RATIOS)

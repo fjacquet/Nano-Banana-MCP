@@ -1,10 +1,18 @@
 export const PRESET_ASPECT_RATIOS = {
   web: "16:9",
   phone: "9:16",
+  webconf: "16:9",
+  banner: "4:1",
   square: "1:1",
 } as const;
 
-export const VALID_PRESETS = ["web", "phone", "square"] as const;
+export const VALID_PRESETS = [
+  "web",
+  "phone",
+  "webconf",
+  "banner",
+  "square",
+] as const;
 
 export type Preset = (typeof VALID_PRESETS)[number];
 
