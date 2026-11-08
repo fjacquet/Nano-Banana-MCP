@@ -1,0 +1,6 @@
+# deepmerge 4.3.1 comes in only through jest-config (dev dependency, never
+# shipped in the npm package). No fixed version exists. Re-check on expiry.
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-02-08
+reason = "dev-only transitive dependency of jest-config, no fix released"
