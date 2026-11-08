@@ -75,7 +75,8 @@
     "fast-uri": "^3.1.4",
     "hono": "^4.12.27",
     "js-yaml": "^4.3.0",
-    "minimatch": "^10.2.6",
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2",
     "protobufjs": "^7.6.5"
   }
 }
